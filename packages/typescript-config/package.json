@@ -1,0 +1,11 @@
+{
+  "name": "@repo/typescript-config",
+  "private": true,
+  "version": "0.0.1",
+  "license": "MIT",
+  "exports": {
+    "./base.json": "./base.json",
+    "./bun-app.json": "./bun-app.json",
+    "./react-app.json": "./react-app.json"
+  }
+}

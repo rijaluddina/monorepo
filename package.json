@@ -1,0 +1,22 @@
+{
+  "name": "@repo/monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "biome format --write .",
+    "check": "biome check --write ."
+  },
+  "devDependencies": {
+    "turbo": "latest",
+    "@biomejs/biome": "^1.9.4"
+  },
+  "packageManager": "bun@1.3.13"
+}
