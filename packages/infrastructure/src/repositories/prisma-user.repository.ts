@@ -43,13 +43,14 @@ export class PrismaUserRepository implements IUserRepository {
     const limit = params?.limit ?? 20;
     const skip = (page - 1) * limit;
 
-    const records = await this.prisma.user.findMany({
-      skip,
-      take: limit,
-      orderBy: { createdAt: "desc" },
-    });
-    
-    const total = await this.prisma.user.count();
+    const [records, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.user.count(),
+    ]);
 
     return {
       users: records.map((r) => this.toDomain(r)),

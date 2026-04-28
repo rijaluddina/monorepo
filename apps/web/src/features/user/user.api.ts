@@ -40,11 +40,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const userApi = {
-  getAll: (page = 1, limit = 20) =>
-    request<PaginatedResponse<UserDTO>>(`/users?page=${page}&limit=${limit}`),
+  getAll: (page = 1, limit = 20, signal?: AbortSignal) =>
+    request<PaginatedResponse<UserDTO>>(`/users?page=${page}&limit=${limit}`, { signal }),
 
-  getById: (id: string) => request<UserDTO>(`/users/${id}`),
+  getById: (id: string, signal?: AbortSignal) => 
+    request<UserDTO>(`/users/${id}`, { signal }),
 
-  create: (body: { firstName: string; lastName: string; email: string; role?: string }) =>
-    request<UserDTO>("/users", { method: "POST", body: JSON.stringify(body) }),
+  create: (body: { firstName: string; lastName: string; email: string; role?: string }, signal?: AbortSignal) =>
+    request<UserDTO>("/users", { method: "POST", body: JSON.stringify(body), signal }),
 };
