@@ -15,10 +15,26 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json", ...init?.headers },
     ...init,
   });
-  const data = await res.json();
+
+  const contentType = res.headers.get("content-type");
+  let data: any;
+
+  try {
+    if (contentType?.includes("application/json")) {
+      data = await res.json();
+    } else {
+      data = await res.text();
+    }
+  } catch (e) {
+    data = await res.text();
+  }
+
   if (!res.ok) {
-    const msg = (data as { error?: { message?: string } }).error?.message ?? "Request failed";
-    throw new Error(msg);
+    const msg =
+      typeof data === "object" && data !== null
+        ? (data as any).error?.message || (data as any).message
+        : data;
+    throw new Error(msg || `Request failed with status ${res.status}`);
   }
   return data as T;
 }

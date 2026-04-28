@@ -91,8 +91,11 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async existsByEmail(email: string): Promise<boolean> {
-    const count = await this.prisma.user.count({ where: { email } });
-    return count > 0;
+    const user = await this.prisma.user.findFirst({
+      where: { email },
+      select: { id: true },
+    });
+    return user !== null;
   }
 
   /** Map Prisma record → domain User aggregate (reconstitute) */
