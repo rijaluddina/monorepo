@@ -146,26 +146,26 @@ export function UserList() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (currentPage: number) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await userApi.getAll(page, 10);
+      const result = await userApi.getAll(currentPage, 10);
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load users");
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void load(page);
+  }, [load, page]);
 
   return (
     <>
-      <CreateUserForm onCreated={load} />
+      <CreateUserForm onCreated={() => void load(page)} />
 
       <div className="card">
         <div className="card-header">
