@@ -1,7 +1,10 @@
+import type { App } from "@repo/api";
 import type { UserDTO } from "@repo/application";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { edenFetch } from "@elysiajs/eden";
 
-const API_BASE = "/api";
+const API_BASE = "http://localhost:3000";
+const fetchApi = edenFetch<App>(API_BASE);
 
 export interface PaginatedResponse<T> {
   data: T[];
@@ -11,44 +14,33 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...init?.headers },
-    ...init,
-  });
-
-  const contentType = res.headers.get("content-type");
-  let data: any;
-
-  try {
-    if (contentType?.includes("application/json")) {
-      data = await res.json();
-    } else {
-      data = await res.text();
-    }
-  } catch (e) {
-    data = await res.text();
-  }
-
-  if (!res.ok) {
-    const msg =
-      typeof data === "object" && data !== null
-        ? (data as any).error?.message || (data as any).message
-        : data;
-    throw new Error(msg || `Request failed with status ${res.status}`);
-  }
-  return data as T;
-}
-
 export const userApi = {
-  getAll: (page = 1, limit = 20, signal?: AbortSignal) =>
-    request<PaginatedResponse<UserDTO>>(`/users?page=${page}&limit=${limit}`, { signal }),
+  getAll: async (page = 1, limit = 20) => {
+    const { data, error } = await fetchApi("/api/users", {
+      method: "GET",
+      query: { page, limit }
+    });
+    if (error) throw new Error((error.value as any)?.message || "Request failed");
+    return data as unknown as PaginatedResponse<UserDTO>;
+  },
 
-  getById: (id: string, signal?: AbortSignal) => 
-    request<UserDTO>(`/users/${id}`, { signal }),
+  getById: async (id: string) => {
+    const { data, error } = await fetchApi("/api/users/:id", {
+      method: "GET",
+      params: { id }
+    });
+    if (error) throw new Error((error.value as any)?.message || "Request failed");
+    return data as unknown as UserDTO;
+  },
 
-  create: (body: { firstName: string; lastName: string; email: string; role?: string }, signal?: AbortSignal) =>
-    request<UserDTO>("/users", { method: "POST", body: JSON.stringify(body), signal }),
+  create: async (body: { firstName: string; lastName: string; email: string; role?: string }) => {
+    const { data, error } = await fetchApi("/api/users", {
+      method: "POST",
+      body: body as any
+    });
+    if (error) throw new Error((error.value as any)?.message || "Request failed");
+    return data as unknown as UserDTO;
+  },
 };
 
 export const userKeys = {
@@ -62,7 +54,7 @@ export const userKeys = {
 export const useUsers = (page = 1, limit = 10) => {
   return useQuery({
     queryKey: userKeys.list(page, limit),
-    queryFn: ({ signal }) => userApi.getAll(page, limit, signal),
+    queryFn: () => userApi.getAll(page, limit),
   });
 };
 

@@ -12,10 +12,13 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@elysiajs/eden": "^1.4.9",
+    "@repo/api": "workspace:*",
     "@repo/application": "*",
     "@repo/shared": "*",
     "@repo/ui": "*",
     "@tanstack/react-query": "^5.100.6",
+    "elysia": "^1.4.28",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
