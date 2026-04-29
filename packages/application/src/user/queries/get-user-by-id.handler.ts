@@ -7,7 +7,8 @@ import { mapUserToDTO } from "../user.mapper.js";
 import type { GetUserByIdQuery } from "./get-user-by-id.query.js";
 
 export class GetUserByIdQueryHandler
-  implements QueryHandler<GetUserByIdQuery, UserDTO> {
+  implements QueryHandler<GetUserByIdQuery, UserDTO>
+{
   constructor(private readonly userRepository: IUserRepository) {}
 
   async handle(query: GetUserByIdQuery): Promise<Result<UserDTO>> {

@@ -28,7 +28,11 @@ export class InMemoryCommandBus implements ICommandBus {
     const name = command.constructor.name;
     const handler = this.handlers.get(name);
     if (!handler) {
-      throw new AppError(`No handler registered for command "${name}"`, "NO_HANDLER", 500);
+      throw new AppError(
+        `No handler registered for command "${name}"`,
+        "NO_HANDLER",
+        500,
+      );
     }
 
     const result = await handler.handle(command);

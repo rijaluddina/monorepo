@@ -1,16 +1,13 @@
 {
   "name": "@repo/monorepo",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
+    "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "contract:export": "bun scripts/export-contract.ts",
     "clean": "turbo run clean && rm -rf node_modules",
     "format": "biome format --write .",
     "check": "biome check --write ."

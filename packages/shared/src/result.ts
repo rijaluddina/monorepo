@@ -92,11 +92,15 @@ export function err<T, E extends Error = Error>(error: E): Err<T, E> {
 }
 
 /** Type guard: is the result Ok? */
-export function isOk<T, E extends Error>(result: Result<T, E>): result is Ok<T, E> {
+export function isOk<T, E extends Error>(
+  result: Result<T, E>,
+): result is Ok<T, E> {
   return result.ok === true;
 }
 
 /** Type guard: is the result Err? */
-export function isErr<T, E extends Error>(result: Result<T, E>): result is Err<T, E> {
+export function isErr<T, E extends Error>(
+  result: Result<T, E>,
+): result is Err<T, E> {
   return result.ok === false;
 }

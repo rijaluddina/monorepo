@@ -32,6 +32,7 @@ const UserSchema = t.Object(
     ]),
     isActive: t.Boolean(),
     createdAt: t.String({ format: "date-time" }),
+    updatedAt: t.String({ format: "date-time" }),
   },
   { description: "User data" },
 );
@@ -87,88 +88,93 @@ export function createServer() {
       },
     )
 
-    // ── Users ───────────────────────────────────────────────────────────
-    .group("/api/users", (app) =>
-      app
-        // GET /api/users?page=1&limit=20
-        .get(
-          "/",
-          async ({ query }) => {
-            const result = await container.queryBus.ask<
-              GetUsersQuery,
-              Result<PaginatedResponse<UserDTO>>
-            >(
-              new GetUsersQuery(
-                Number(query.page ?? 1),
-                Number(query.limit ?? 20),
-              ),
-            );
-            return result.unwrap();
-          },
-          {
-            query: t.Object({
-              page: t.Optional(t.Numeric({ default: 1 })),
-              limit: t.Optional(t.Numeric({ default: 20 })),
-            }),
-            response: PaginatedUserResponse,
-            detail: { tags: ["Users"], summary: "List all users (paginated)" },
-          },
-        )
-
-        // GET /api/users/:id
-        .get(
-          "/:id",
-          async ({ params }) => {
-            const result = await container.queryBus.ask<
-              GetUserByIdQuery,
-              Result<UserDTO>
-            >(new GetUserByIdQuery(params.id));
-            return result.unwrap();
-          },
-          {
-            params: t.Object({ id: t.String() }),
-            response: UserSchema,
-            detail: { tags: ["Users"], summary: "Get user by ID" },
-          },
-        )
-
-        // POST /api/users
-        .post(
-          "/",
-          async ({ body, set }) => {
-            const result = await container.commandBus.dispatch<
-              CreateUserCommand,
-              Result<UserDTO>
-            >(
-              new CreateUserCommand(
-                body.firstName,
-                body.lastName,
-                body.email,
-                body.role,
-              ),
-            );
-            set.status = 201;
-            return result.unwrap();
-          },
-          {
-            body: t.Object({
-              firstName: t.String({ minLength: 1 }),
-              lastName: t.String({ minLength: 1 }),
-              email: t.String({ format: "email" }),
-              role: t.Optional(
-                t.Union([
-                  t.Literal("admin"),
-                  t.Literal("member"),
-                  t.Literal("viewer"),
-                ]),
-              ),
-            }),
-            response: {
-              201: UserSchema,
+    // ── API ─────────────────────────────────────────────────────────────
+    .group("/api", (app) =>
+      app.group("/users", (app) =>
+        app
+          // GET /api/users
+          .get(
+            "/",
+            async ({ query }) => {
+              const result = await container.queryBus.ask<
+                GetUsersQuery,
+                Result<PaginatedResponse<UserDTO>>
+              >(
+                new GetUsersQuery(
+                  Number(query.page ?? 1),
+                  Number(query.limit ?? 20),
+                ),
+              );
+              return result.unwrap();
             },
-            detail: { tags: ["Users"], summary: "Create a new user" },
-          },
-        ),
+            {
+              query: t.Object({
+                page: t.Optional(t.Numeric({ default: 1 })),
+                limit: t.Optional(t.Numeric({ default: 20 })),
+              }),
+              response: PaginatedUserResponse,
+              detail: {
+                tags: ["Users"],
+                summary: "List all users (paginated)",
+              },
+            },
+          )
+
+          // POST /api/users
+          .post(
+            "/",
+            async ({ body, set }) => {
+              const result = await container.commandBus.dispatch<
+                CreateUserCommand,
+                Result<UserDTO>
+              >(
+                new CreateUserCommand(
+                  body.firstName,
+                  body.lastName,
+                  body.email,
+                  body.role,
+                ),
+              );
+              set.status = 201;
+              return result.unwrap();
+            },
+            {
+              body: t.Object({
+                firstName: t.String({ minLength: 1 }),
+                lastName: t.String({ minLength: 1 }),
+                email: t.String({ format: "email" }),
+                role: t.Optional(
+                  t.Union([
+                    t.Literal("admin"),
+                    t.Literal("member"),
+                    t.Literal("viewer"),
+                  ]),
+                ),
+              }),
+              response: {
+                201: UserSchema,
+              },
+              detail: { tags: ["Users"], summary: "Create a new user" },
+            },
+          )
+
+          // GET /api/users/:id
+          .get(
+            "/:id",
+            async ({ params }) => {
+              const result = await container.queryBus.ask<
+                GetUserByIdQuery,
+                Result<UserDTO>
+              >(new GetUserByIdQuery(params.id));
+              return result.unwrap();
+            },
+            {
+              params: t.Object({ id: t.String() }),
+              response: UserSchema,
+              detail: { tags: ["Users"], summary: "Get user by ID" },
+            },
+          ),
+      ),
     )
 
     // ── Global error handler ────────────────────────────────────────────

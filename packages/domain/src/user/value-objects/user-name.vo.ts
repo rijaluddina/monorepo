@@ -30,13 +30,17 @@ export class UserName extends ValueObject<UserNameProps> {
       throw new ValidationError("First name cannot be empty");
     }
     if (firstName.trim().length > UserName.MAX_LENGTH) {
-      throw new ValidationError(`First name exceeds max length of ${UserName.MAX_LENGTH}`);
+      throw new ValidationError(
+        `First name exceeds max length of ${UserName.MAX_LENGTH}`,
+      );
     }
     if (!lastName || lastName.trim().length < UserName.MIN_LENGTH) {
       throw new ValidationError("Last name cannot be empty");
     }
     if (lastName.trim().length > UserName.MAX_LENGTH) {
-      throw new ValidationError(`Last name exceeds max length of ${UserName.MAX_LENGTH}`);
+      throw new ValidationError(
+        `Last name exceeds max length of ${UserName.MAX_LENGTH}`,
+      );
     }
   }
 

@@ -7,10 +7,13 @@ import { mapUserToDTO } from "../user.mapper.js";
 import type { GetUsersQuery } from "./get-users.query.js";
 
 export class GetUsersQueryHandler
-  implements QueryHandler<GetUsersQuery, PaginatedResult<UserDTO>> {
+  implements QueryHandler<GetUsersQuery, PaginatedResult<UserDTO>>
+{
   constructor(private readonly userRepository: IUserRepository) {}
 
-  async handle(query: GetUsersQuery): Promise<Result<PaginatedResult<UserDTO>>> {
+  async handle(
+    query: GetUsersQuery,
+  ): Promise<Result<PaginatedResult<UserDTO>>> {
     const { users, total } = await this.userRepository.findAll({
       page: query.page,
       limit: query.limit,

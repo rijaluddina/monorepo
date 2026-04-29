@@ -24,7 +24,11 @@ export class InMemoryQueryBus implements IQueryBus {
     const name = query.constructor.name;
     const handler = this.handlers.get(name);
     if (!handler) {
-      throw new AppError(`No handler registered for query "${name}"`, "NO_HANDLER", 500);
+      throw new AppError(
+        `No handler registered for query "${name}"`,
+        "NO_HANDLER",
+        500,
+      );
     }
 
     const result = await handler.handle(query);

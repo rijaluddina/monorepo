@@ -11,7 +11,12 @@ export class UserCreatedEvent extends BaseDomainEvent {
   public readonly name: string;
   public readonly email: string;
 
-  constructor(aggregateId: string, name: UserName, email: Email, version: number) {
+  constructor(
+    aggregateId: string,
+    name: UserName,
+    email: Email,
+    version: number,
+  ) {
     super(aggregateId, USER_CREATED, version);
     this.name = name.fullName;
     this.email = email.value;

@@ -1,17 +1,17 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for code work in repo.
 
 ## Quick Commands
 
-### Run from root (Turborepo pipelines)
-- `bun run dev` — start all apps (api :3000, web :5173)
-- `bun run build` — build all packages & apps
-- `bun run typecheck` — type check entire monorepo
-- `bun run lint` — lint with Biome
+### Run from root (Turborepo)
+- `bun run dev` — start apps (api :3000, web :5173)
+- `bun run build` — build packages & apps
+- `bun run typecheck` — type check monorepo
+- `bun run lint` — lint (Biome)
 - `bun run check` — Biome check + auto-fix
 
-### Database (delegates to infrastructure)
+### Database (infrastructure)
 - `bun run db:migrate` — apply Drizzle migrations
 - `bun run db:seed` — seed 3 demo users
 
@@ -19,12 +19,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `cd apps/api && bun run dev` — ElysiaJS backend
 - `cd apps/web && bun run dev` — Vite + React frontend
 
-### Single test (no test runner configured yet; use this when added)
+### Single test
 - `cd <package> && bun test <file>` — Bun test runner
 
 ## Architecture
 
-Clean Architecture + DDD + CQRS + Event Sourcing. Monorepo powered by Turborepo + Bun.
+Clean Architecture + DDD + CQRS + Event Sourcing. Turborepo + Bun.
 
 ### Dependency Rule (strict)
 Inner layers NEVER import outer layers:
@@ -43,28 +43,28 @@ Domain (packages/domain) ← zero external deps
 
 | Package | Role |
 |---------|------|
-| `domain` | Entities, Value Objects, Aggregates, Domain Events. Pure TS, zero deps. |
-| `application` | CQRS Commands/Queries + Handlers, Port interfaces (`IUserRepository`, etc.) |
-| `infrastructure` | Drizzle repos (write model), Event Store, Buses, DI Container (`AppContainer`) |
-| `shared` | `Result` monad, error classes, shared types. Cross-layer. |
-| `ui` | Shared React components (Button, etc.) |
-| `api` | ElysiaJS routes → CQRS bus only. No business logic. |
+| `domain` | Entities, VOs, Aggregates, Domain Events. Pure TS, zero deps. |
+| `application` | CQRS Cmd/Query + Handlers, Port interfaces (`IUserRepository`) |
+| `infrastructure` | Drizzle repos (write model), Event Store, Buses, DI (`AppContainer`) |
+| `shared` | `Result` monad, error classes, shared types. |
+| `ui` | Shared React components. |
+| `api` | ElysiaJS routes → CQRS bus. No biz logic. |
 | `web` | Vite + React 19 frontend. Consumes API. |
 
 ### Key Patterns
 
-**Result Monad** (`packages/shared/src/result.ts`): Business errors return `Err`, never throw. Caller must handle both `Ok`/`Err`.
+**Result Monad** (`packages/shared/src/result.ts`): Biz errors return `Err`, never throw. Handle `Ok`/`Err`.
 
-**Dependency Inversion** (`packages/infrastructure/src/container/app-container.ts`): `AppContainer` is composition root. Single place wiring abstractions to implementations.
+**Dependency Inversion** (`packages/infrastructure/src/container/app-container.ts`): `AppContainer` is composition root. Wiring abstractions to impls.
 
-**CQRS Flow** (create user example):
+**CQRS Flow** (create user):
 ```
 POST /api/users
   → Elysia controller (apps/api)
     → CommandBus.dispatch(CreateUserCommand)
       → CreateUserCommandHandler (packages/application)
           1. IUserRepository.existsByEmail() — guard
-          2. User.create() — domain aggregate emits events
+          2. User.create() — aggregate emit events
           3. IUserRepository.save() — write model (Drizzle)
           4. IUserEventStore.append() — event store (Drizzle)
           5. IEventBus.publishAll() — event bus
@@ -72,14 +72,14 @@ POST /api/users
       → 201 Created
 ```
 
-**Event Sourcing**: Domain events collected in aggregate, appended to `event_store` table, published to event bus.
+**Event Sourcing**: Domain events in aggregate, append `event_store` table, publish bus.
 
 ## Adding a New Bounded Context
 
 1. **Domain** — `packages/domain/src/<context>/` (entities, VOs, events)
-2. **Application** — `packages/application/src/<context>/` (commands, queries, handlers, ports)
-3. **Infrastructure** — Drizzle model + repo + register in `AppContainer`
-4. **API** — add Elysia route group in `apps/api/src/server.ts`
+2. **Application** — `packages/application/src/<context>/` (cmd, query, handlers, ports)
+3. **Infrastructure** — Drizzle model + repo + register `AppContainer`
+4. **API** — add Elysia route group `apps/api/src/server.ts`
 
 ## Tech Stack
 
@@ -99,7 +99,7 @@ Copy `.env.example` to `.env`. Key vars: `DATABASE_URL`, `VITE_API_URL`.
 
 ## Notes
 
-- Package manager is **Bun**, not npm/yarn/pnpm. Use `bun run <script>`.
-- API docs at http://localhost:3000/docs (Swagger UI).
-- Inter-package imports use `@repo/*` scope (workspaces).
+- Manager: **Bun**. Use `bun run <script>`.
+- API docs: http://localhost:3000/docs (Swagger).
+- Inter-package imports: `@repo/*` scope.
 - Drizzle schema: `packages/infrastructure/src/database/schema.ts`.

@@ -21,7 +21,8 @@ import type { CreateUserCommand } from "./create-user.command.js";
  *  6. Return DTO
  */
 export class CreateUserCommandHandler
-  implements CommandHandler<CreateUserCommand, UserDTO> {
+  implements CommandHandler<CreateUserCommand, UserDTO>
+{
   constructor(
     private readonly userRepository: IUserRepository,
     private readonly eventStore: IUserEventStore,
@@ -32,7 +33,9 @@ export class CreateUserCommandHandler
     // 1. Guard: duplicate email
     const exists = await this.userRepository.existsByEmail(command.email);
     if (exists) {
-      return err(new ConflictError(`Email "${command.email}" already registered`));
+      return err(
+        new ConflictError(`Email "${command.email}" already registered`),
+      );
     }
 
     // 2. Create aggregate — domain validates, emits events

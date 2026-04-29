@@ -1,14 +1,14 @@
-import { db } from "../database/drizzle.client.js";
-import { DrizzleUserRepository } from "../repositories/drizzle-user.repository.js";
-import { DrizzleEventStore } from "../event-store/drizzle-event-store.js";
-import { InMemoryCommandBus } from "../bus/in-memory-command-bus.js";
-import { InMemoryQueryBus } from "../bus/in-memory-query-bus.js";
-import { InMemoryEventBus } from "../bus/in-memory-event-bus.js";
 import {
   CreateUserCommandHandler,
-  GetUsersQueryHandler,
   GetUserByIdQueryHandler,
+  GetUsersQueryHandler,
 } from "@repo/application";
+import { InMemoryCommandBus } from "../bus/in-memory-command-bus.js";
+import { InMemoryEventBus } from "../bus/in-memory-event-bus.js";
+import { InMemoryQueryBus } from "../bus/in-memory-query-bus.js";
+import { db } from "../database/drizzle.client.js";
+import { DrizzleEventStore } from "../event-store/drizzle-event-store.js";
+import { DrizzleUserRepository } from "../repositories/drizzle-user.repository.js";
 
 /**
  * AppContainer — Composition Root.

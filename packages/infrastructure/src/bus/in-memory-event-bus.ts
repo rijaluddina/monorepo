@@ -1,5 +1,5 @@
-import type { DomainEvent } from "@repo/domain";
 import type { IEventBus } from "@repo/application";
+import type { DomainEvent } from "@repo/domain";
 
 type EventHandler = (event: DomainEvent) => Promise<void>;
 

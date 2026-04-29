@@ -7,19 +7,30 @@ export class AppError extends Error {
   public readonly code: string;
   public readonly isOperational: boolean;
 
-  constructor(message: string, code: string, statusCode = 500, isOperational = true) {
+  constructor(
+    message: string,
+    code: string,
+    statusCode = 500,
+    isOperational = true,
+  ) {
     super(message);
     this.name = this.constructor.name;
     this.code = code;
     this.statusCode = statusCode;
     this.isOperational = isOperational;
-    (Error as unknown as { captureStackTrace?: (t: unknown, c: unknown) => void }).captureStackTrace?.(this, this.constructor);
+    (
+      Error as unknown as {
+        captureStackTrace?: (t: unknown, c: unknown) => void;
+      }
+    ).captureStackTrace?.(this, this.constructor);
   }
 }
 
 export class NotFoundError extends AppError {
   constructor(resource: string, id?: string) {
-    const msg = id ? `${resource} with id "${id}" not found` : `${resource} not found`;
+    const msg = id
+      ? `${resource} with id "${id}" not found`
+      : `${resource} not found`;
     super(msg, "NOT_FOUND", 404);
   }
 }

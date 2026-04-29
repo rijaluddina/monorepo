@@ -15,10 +15,6 @@ export abstract class AggregateRoot<T> extends Entity<T> {
   private _domainEvents: DomainEvent[] = [];
   private _version = 0;
 
-  constructor(props: T, id: UniqueId) {
-    super(props, id);
-  }
-
   get domainEvents(): ReadonlyArray<DomainEvent> {
     return this._domainEvents;
   }

@@ -111,7 +111,12 @@ export class User extends AggregateRoot<UserProps> {
     };
 
     this.addDomainEvent(
-      new UserEmailChangedEvent(this._id.value, oldEmail, email.value, this.version + 1),
+      new UserEmailChangedEvent(
+        this._id.value,
+        oldEmail,
+        email.value,
+        this.version + 1,
+      ),
     );
   }
 

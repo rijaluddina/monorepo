@@ -1,6 +1,6 @@
-import { db, pool } from "./drizzle.client.js";
-import { users as userTable, eventStore } from "./schema.js";
 import { User } from "@repo/domain";
+import { db, pool } from "./drizzle.client.js";
+import { eventStore, users as userTable } from "./schema.js";
 
 async function seed() {
   console.log("🌱 Seeding database...");
@@ -10,9 +10,24 @@ async function seed() {
   await db.delete(userTable);
 
   const rawUsers = [
-    { firstName: "Alice", lastName: "Admin", email: "alice@example.com", role: "ADMIN" as const },
-    { firstName: "Bob", lastName: "Member", email: "bob@example.com", role: "MEMBER" as const },
-    { firstName: "Carol", lastName: "Viewer", email: "carol@example.com", role: "VIEWER" as const },
+    {
+      firstName: "Alice",
+      lastName: "Admin",
+      email: "alice@example.com",
+      role: "ADMIN" as const,
+    },
+    {
+      firstName: "Bob",
+      lastName: "Member",
+      email: "bob@example.com",
+      role: "MEMBER" as const,
+    },
+    {
+      firstName: "Carol",
+      lastName: "Viewer",
+      email: "carol@example.com",
+      role: "VIEWER" as const,
+    },
   ];
 
   for (const u of rawUsers) {

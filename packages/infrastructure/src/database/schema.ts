@@ -1,12 +1,12 @@
 import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
   pgTable,
   text,
-  boolean,
   timestamp,
-  integer,
-  pgEnum,
-  jsonb,
-  index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
@@ -32,7 +32,7 @@ export const users = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
-  (table) => [uniqueIndex("users_email_key").on(table.email)]
+  (table) => [uniqueIndex("users_email_key").on(table.email)],
 );
 
 // ─── Event Store Table ───────────────────────────────────────────────────────
@@ -45,10 +45,13 @@ export const eventStore = pgTable(
     eventType: text("eventType").notNull(),
     payload: jsonb("payload").notNull(),
     version: integer("version").notNull(),
-    occurredAt: timestamp("occurredAt", { precision: 3, mode: "date" }).notNull(),
+    occurredAt: timestamp("occurredAt", {
+      precision: 3,
+      mode: "date",
+    }).notNull(),
   },
   (table) => [
     index("event_store_aggregateId_idx").on(table.aggregateId),
     index("event_store_eventType_idx").on(table.eventType),
-  ]
+  ],
 );

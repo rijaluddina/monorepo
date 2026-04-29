@@ -9,7 +9,12 @@ export class UserEmailChangedEvent extends BaseDomainEvent {
   public readonly oldEmail: string;
   public readonly newEmail: string;
 
-  constructor(aggregateId: string, oldEmail: string, newEmail: string, version: number) {
+  constructor(
+    aggregateId: string,
+    oldEmail: string,
+    newEmail: string,
+    version: number,
+  ) {
     super(aggregateId, USER_EMAIL_CHANGED, version);
     this.oldEmail = oldEmail;
     this.newEmail = newEmail;

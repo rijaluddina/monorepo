@@ -9,7 +9,7 @@ export abstract class ValueObject<T> {
 
   constructor(props: T) {
     this.validate(props);
-    this.props = Object.freeze({ ...props as object }) as T;
+    this.props = Object.freeze({ ...(props as object) }) as T;
   }
 
   /** Override to add invariant validation. Throw on invalid input. */

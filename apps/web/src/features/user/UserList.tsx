@@ -1,6 +1,6 @@
-import { useState } from "react";
 import type { UserDTO } from "@repo/application";
-import { useUsers, useCreateUser } from "./user.api.js";
+import { useState } from "react";
+import { useCreateUser, useUsers } from "./user.api.js";
 
 // ─── Create User Form ──────────────────────────────────────────────────────
 
@@ -14,7 +14,9 @@ function CreateUserForm() {
   const [success, setSuccess] = useState(false);
   const createUser = useCreateUser();
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
@@ -39,10 +41,14 @@ function CreateUserForm() {
 
       {createUser.isError && (
         <div className="alert alert-error">
-          {createUser.error instanceof Error ? createUser.error.message : "Failed to create user"}
+          {createUser.error instanceof Error
+            ? createUser.error.message
+            : "Failed to create user"}
         </div>
       )}
-      {success && <div className="alert alert-success">✓ User created successfully!</div>}
+      {success && (
+        <div className="alert alert-success">✓ User created successfully!</div>
+      )}
 
       <form onSubmit={handleSubmit} className="form-inner">
         <div className="form-row">
@@ -84,7 +90,12 @@ function CreateUserForm() {
           </div>
           <div className="form-group">
             <label htmlFor="role">Role</label>
-            <select id="role" name="role" value={form.role} onChange={handleChange}>
+            <select
+              id="role"
+              name="role"
+              value={form.role}
+              onChange={handleChange}
+            >
               <option value="member">Member</option>
               <option value="admin">Admin</option>
               <option value="viewer">Viewer</option>
@@ -92,7 +103,11 @@ function CreateUserForm() {
           </div>
         </div>
         <div className="form-actions">
-          <button type="submit" className="btn btn-primary" disabled={createUser.isPending}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={createUser.isPending}
+          >
             {createUser.isPending ? "Creating…" : "Create User"}
           </button>
         </div>
@@ -104,7 +119,8 @@ function CreateUserForm() {
 // ─── User Table Row ────────────────────────────────────────────────────────
 
 function UserRow({ user }: { user: UserDTO }) {
-  const initials = `${user.firstName[0] ?? ""}${user.lastName[0] ?? ""}`.toUpperCase();
+  const initials =
+    `${user.firstName[0] ?? ""}${user.lastName[0] ?? ""}`.toUpperCase();
 
   return (
     <tr>
@@ -121,7 +137,9 @@ function UserRow({ user }: { user: UserDTO }) {
         <span className={`badge badge-${user.role}`}>{user.role}</span>
       </td>
       <td>
-        <span className={`badge ${user.isActive ? "badge-active" : "badge-inactive"}`}>
+        <span
+          className={`badge ${user.isActive ? "badge-active" : "badge-inactive"}`}
+        >
           {user.isActive ? "● Active" : "○ Inactive"}
         </span>
       </td>
@@ -145,9 +163,7 @@ export function UserList() {
       <div className="card">
         <div className="card-header">
           <span className="card-title">👥 Users</span>
-          {data && (
-            <span className="card-count">{data.total} total</span>
-          )}
+          {data && <span className="card-count">{data.total} total</span>}
         </div>
 
         <table className="user-table">
@@ -172,7 +188,9 @@ export function UserList() {
               <tr>
                 <td colSpan={4}>
                   <div className="alert alert-error">
-                    {error instanceof Error ? error.message : "Failed to load users"}
+                    {error instanceof Error
+                      ? error.message
+                      : "Failed to load users"}
                   </div>
                 </td>
               </tr>
@@ -187,15 +205,17 @@ export function UserList() {
                 </td>
               </tr>
             )}
-            {!isLoading && !isError && data?.data.map((user) => (
-              <UserRow key={user.id} user={user} />
-            ))}
+            {!isLoading &&
+              !isError &&
+              data?.data.map((user) => <UserRow key={user.id} user={user} />)}
           </tbody>
         </table>
 
         {data && data.totalPages > 1 && (
           <div className="pagination">
-            <span>Page {data.page} of {data.totalPages}</span>
+            <span>
+              Page {data.page} of {data.totalPages}
+            </span>
             <div className="pagination-btns">
               <button
                 className="btn btn-ghost"
@@ -220,4 +240,3 @@ export function UserList() {
     </>
   );
 }
-

@@ -26,13 +26,20 @@ export default function App() {
         {/* Hero */}
         <section className="hero">
           <p className="hero-eyebrow">Turborepo + Bun</p>
-          <h1>Production-Ready<br />Monorepo Boilerplate</h1>
+          <h1>
+            Production-Ready
+            <br />
+            Monorepo Boilerplate
+          </h1>
           <p className="hero-sub">
-            ElysiaJS backend · Vite + React frontend · PostgreSQL + Drizzle · Full DDD architecture
+            ElysiaJS backend · Vite + React frontend · PostgreSQL + Drizzle ·
+            Full DDD architecture
           </p>
           <div className="arch-badges">
             {ARCH_BADGES.map((b) => (
-              <span key={b} className="arch-badge">{b}</span>
+              <span key={b} className="arch-badge">
+                {b}
+              </span>
             ))}
           </div>
         </section>

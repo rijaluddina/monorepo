@@ -6,7 +6,10 @@ import type { DomainEvent } from "@repo/domain";
  */
 export interface IUserEventStore {
   /** Append new events to the stream for an aggregate */
-  append(aggregateId: string, events: ReadonlyArray<DomainEvent>): Promise<void>;
+  append(
+    aggregateId: string,
+    events: ReadonlyArray<DomainEvent>,
+  ): Promise<void>;
   /** Replay all events for a given aggregate (for reconstitution) */
   getEvents(aggregateId: string): Promise<DomainEvent[]>;
   /** Get all events of a specific type across all aggregates */

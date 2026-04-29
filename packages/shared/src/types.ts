@@ -19,7 +19,14 @@ export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 export type RequireBy<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
 
 /** Primitive types */
-export type Primitive = string | number | boolean | bigint | symbol | null | undefined;
+export type Primitive =
+  | string
+  | number
+  | boolean
+  | bigint
+  | symbol
+  | null
+  | undefined;
 
 /** A plain JS object (record) */
 export type PlainObject = Record<string, unknown>;
