@@ -4,9 +4,19 @@ import {
   CreateUserCommand,
   GetUserByIdQuery,
   GetUsersQuery,
+  type UserDTO,
 } from "@repo/application";
 import { AppContainer } from "@repo/infrastructure";
+import type { Result } from "@repo/shared";
 import { Elysia, t } from "elysia";
+
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 const UserSchema = t.Object(
   {
@@ -84,12 +94,16 @@ export function createServer() {
         .get(
           "/",
           async ({ query }) => {
-            return await container.queryBus.ask(
+            const result = await container.queryBus.ask<
+              GetUsersQuery,
+              Result<PaginatedResponse<UserDTO>>
+            >(
               new GetUsersQuery(
                 Number(query.page ?? 1),
                 Number(query.limit ?? 20),
               ),
             );
+            return result.unwrap();
           },
           {
             query: t.Object({
@@ -105,9 +119,11 @@ export function createServer() {
         .get(
           "/:id",
           async ({ params }) => {
-            return await container.queryBus.ask(
-              new GetUserByIdQuery(params.id),
-            );
+            const result = await container.queryBus.ask<
+              GetUserByIdQuery,
+              Result<UserDTO>
+            >(new GetUserByIdQuery(params.id));
+            return result.unwrap();
           },
           {
             params: t.Object({ id: t.String() }),
@@ -120,7 +136,10 @@ export function createServer() {
         .post(
           "/",
           async ({ body, set }) => {
-            const user = await container.commandBus.dispatch(
+            const result = await container.commandBus.dispatch<
+              CreateUserCommand,
+              Result<UserDTO>
+            >(
               new CreateUserCommand(
                 body.firstName,
                 body.lastName,
@@ -129,7 +148,7 @@ export function createServer() {
               ),
             );
             set.status = 201;
-            return user;
+            return result.unwrap();
           },
           {
             body: t.Object({
