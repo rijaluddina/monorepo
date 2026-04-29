@@ -1,5 +1,5 @@
 import type { User } from "@repo/domain";
-import type { Optional, Result, AppError } from "@repo/shared";
+import type { AppError, Optional, Result } from "@repo/shared";
 
 /**
  * IUserRepository — Port. Infrastructure implements with Drizzle+PostgreSQL.

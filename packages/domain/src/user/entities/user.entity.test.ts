@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { User } from "./user.entity.js";
 import { isErr, isOk } from "@repo/shared";
-import { UserCreatedEvent } from "../events/user-created.event.js";
-import { UserEmailChangedEvent } from "../events/user-email-changed.event.js";
 import { UserActivatedEvent } from "../events/user-activated.event.js";
+import { UserCreatedEvent } from "../events/user-created.event.js";
 import { UserDeactivatedEvent } from "../events/user-deactivated.event.js";
+import { UserEmailChangedEvent } from "../events/user-email-changed.event.js";
 import { UserRoleChangedEvent } from "../events/user-role-changed.event.js";
+import { User } from "./user.entity.js";
 
 describe("User Entity", () => {
   test("should create a user and emit UserCreatedEvent", () => {
@@ -16,7 +16,7 @@ describe("User Entity", () => {
     });
 
     expect(isOk(userResult)).toBe(true);
-    
+
     if (isOk(userResult)) {
       const user = userResult.value;
       expect(user.name.fullName).toBe("John Doe");
@@ -27,7 +27,7 @@ describe("User Entity", () => {
       const events = user.domainEvents;
       expect(events.length).toBe(1);
       expect(events[0]).toBeInstanceOf(UserCreatedEvent);
-      
+
       const event = events[0] as UserCreatedEvent;
       expect(event.aggregateId).toBe(user.id.value);
       expect(event.name).toBe("John Doe");
@@ -51,14 +51,14 @@ describe("User Entity", () => {
         firstName: "John",
         lastName: "Doe",
         email: "john.doe@example.com",
-      }).value as User;
+      }).unwrap();
 
       user.clearEvents();
-      
+
       const result = user.changeEmail("new.email@example.com");
       expect(isOk(result)).toBe(true);
       expect(user.email.value).toBe("new.email@example.com");
-      
+
       const events = user.domainEvents;
       expect(events.length).toBe(1);
       expect(events[0]).toBeInstanceOf(UserEmailChangedEvent);
@@ -72,10 +72,10 @@ describe("User Entity", () => {
         firstName: "John",
         lastName: "Doe",
         email: "john.doe@example.com",
-      }).value as User;
+      }).unwrap();
 
       user.clearEvents();
-      
+
       const result = user.changeEmail("john.doe@example.com");
       expect(isOk(result)).toBe(true);
       expect(user.domainEvents.length).toBe(0);
@@ -86,7 +86,7 @@ describe("User Entity", () => {
         firstName: "John",
         lastName: "Doe",
         email: "john.doe@example.com",
-      }).value as User;
+      }).unwrap();
 
       const result = user.changeEmail("invalid-email");
       expect(isErr(result)).toBe(true);
@@ -99,11 +99,11 @@ describe("User Entity", () => {
         firstName: "John",
         lastName: "Doe",
         email: "john.doe@example.com",
-      }).value as User;
+      }).unwrap();
 
       user.clearEvents();
       user.deactivate();
-      
+
       expect(user.isActive).toBe(false);
       expect(user.domainEvents.length).toBe(1);
       expect(user.domainEvents[0]).toBeInstanceOf(UserDeactivatedEvent);
@@ -114,12 +114,12 @@ describe("User Entity", () => {
         firstName: "John",
         lastName: "Doe",
         email: "john.doe@example.com",
-      }).value as User;
+      }).unwrap();
 
       user.deactivate();
       user.clearEvents();
       user.deactivate();
-      
+
       expect(user.domainEvents.length).toBe(0);
     });
 
@@ -128,12 +128,12 @@ describe("User Entity", () => {
         firstName: "John",
         lastName: "Doe",
         email: "john.doe@example.com",
-      }).value as User;
+      }).unwrap();
 
       user.deactivate();
       user.clearEvents();
       user.activate();
-      
+
       expect(user.isActive).toBe(true);
       expect(user.domainEvents.length).toBe(1);
       expect(user.domainEvents[0]).toBeInstanceOf(UserActivatedEvent);
@@ -144,11 +144,11 @@ describe("User Entity", () => {
         firstName: "John",
         lastName: "Doe",
         email: "john.doe@example.com",
-      }).value as User;
+      }).unwrap();
 
       user.clearEvents();
       user.activate();
-      
+
       expect(user.domainEvents.length).toBe(0);
     });
   });
@@ -160,11 +160,11 @@ describe("User Entity", () => {
         lastName: "Doe",
         email: "john.doe@example.com",
         role: "member",
-      }).value as User;
+      }).unwrap();
 
       user.clearEvents();
       user.changeRole("admin");
-      
+
       expect(user.role).toBe("admin");
       expect(user.domainEvents.length).toBe(1);
       expect(user.domainEvents[0]).toBeInstanceOf(UserRoleChangedEvent);
@@ -179,11 +179,11 @@ describe("User Entity", () => {
         lastName: "Doe",
         email: "john.doe@example.com",
         role: "member",
-      }).value as User;
+      }).unwrap();
 
       user.clearEvents();
       user.changeRole("member");
-      
+
       expect(user.domainEvents.length).toBe(0);
     });
   });

@@ -1,5 +1,5 @@
 import type { DomainEvent } from "@repo/domain";
-import type { Result, AppError } from "@repo/shared";
+import type { AppError, Result } from "@repo/shared";
 
 /**
  * IUserEventStore — Port for Event Sourcing persistence.

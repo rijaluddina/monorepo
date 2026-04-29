@@ -112,7 +112,7 @@ export function isErr<T, E extends Error>(
  * If any result is an Err, the first Err is returned.
  * Otherwise, an Ok with an array of values is returned.
  */
-export function combine<T extends any[], E extends Error = Error>(
+export function combine<T extends unknown[], E extends Error = Error>(
   results: { [K in keyof T]: Result<T[K], E> },
 ): Result<T, E> {
   const values = [] as unknown as T;

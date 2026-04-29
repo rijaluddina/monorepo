@@ -1,4 +1,4 @@
-import type { UserDTO } from "@repo/application";
+import type { UserDTO } from "@repo/application"; //Not used
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 

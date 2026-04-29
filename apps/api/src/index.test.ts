@@ -8,7 +8,7 @@ describe("API Integration Tests", () => {
     it("should return 200 and status ok", async () => {
       const response = await app.handle(new Request("http://localhost/health"));
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as { status: string };
       expect(body.status).toBe("ok");
     });
   });
@@ -33,7 +33,13 @@ describe("API Integration Tests", () => {
       );
 
       expect(response.status).toBe(201);
-      const body = await response.json();
+      const body = (await response.json()) as {
+        firstName: string;
+        lastName: string;
+        email: string;
+        role: string;
+        id: string;
+      };
       expect(body.firstName).toBe(userData.firstName);
       expect(body.lastName).toBe(userData.lastName);
       expect(body.email).toBe(userData.email);
@@ -86,9 +92,16 @@ describe("API Integration Tests", () => {
 
   describe("GET /api/users", () => {
     it("should return a list of users", async () => {
-      const response = await app.handle(new Request("http://localhost/api/users"));
+      const response = await app.handle(
+        new Request("http://localhost/api/users"),
+      );
       expect(response.status).toBe(200);
-      const body = await response.json();
+      const body = (await response.json()) as {
+        data: unknown[];
+        total: unknown;
+        page: unknown;
+        limit: unknown;
+      };
       expect(body.data).toBeArray();
       expect(body.total).toBeDefined();
       expect(body.page).toBeDefined();

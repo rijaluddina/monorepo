@@ -1,10 +1,10 @@
-import { describe, test, expect, mock, beforeEach } from "bun:test";
-import { CreateUserCommandHandler } from "./create-user.handler.js";
-import type { IUserRepository } from "../ports/user-repository.port.ts";
-import type { IUserEventStore } from "../ports/user-event-store.port.ts";
+import { type Mock, beforeEach, describe, expect, mock, test } from "bun:test";
+import { ConflictError, ValidationError, err, ok } from "@repo/shared";
 import type { IEventBus } from "../../shared/event-bus.port.ts";
+import type { IUserEventStore } from "../ports/user-event-store.port.ts";
+import type { IUserRepository } from "../ports/user-repository.port.ts";
 import { CreateUserCommand } from "./create-user.command.js";
-import { ok, err, ValidationError, ConflictError } from "@repo/shared";
+import { CreateUserCommandHandler } from "./create-user.handler.js";
 
 describe("CreateUserCommandHandler", () => {
   let userRepository: IUserRepository;
@@ -32,22 +32,34 @@ describe("CreateUserCommandHandler", () => {
       publishAll: mock(),
     } as unknown as IEventBus;
 
-    handler = new CreateUserCommandHandler(userRepository, eventStore, eventBus);
+    handler = new CreateUserCommandHandler(
+      userRepository,
+      eventStore,
+      eventBus,
+    );
   });
 
   test("should create a user successfully", async () => {
     // Arrange
-    const command: CreateUserCommand = {
-      firstName: "John",
-      lastName: "Doe",
-      email: "john.doe@example.com",
-      role: "member",
-    };
+    const command = new CreateUserCommand(
+      "John",
+      "Doe",
+      "john.doe@example.com",
+      "member",
+    );
 
-    (userRepository.existsByEmail as any).mockResolvedValue(ok(false));
-    (userRepository.save as any).mockResolvedValue(ok(undefined));
-    (eventStore.append as any).mockResolvedValue(ok(undefined));
-    (eventBus.publishAll as any).mockResolvedValue(ok(undefined));
+    (
+      userRepository.existsByEmail as Mock<typeof userRepository.existsByEmail>
+    ).mockResolvedValue(ok(false));
+    (userRepository.save as Mock<typeof userRepository.save>).mockResolvedValue(
+      ok(undefined),
+    );
+    (eventStore.append as Mock<typeof eventStore.append>).mockResolvedValue(
+      ok(undefined),
+    );
+    (eventBus.publishAll as Mock<typeof eventBus.publishAll>).mockResolvedValue(
+      ok(undefined),
+    );
 
     // Act
     const result = await handler.handle(command);
@@ -67,39 +79,43 @@ describe("CreateUserCommandHandler", () => {
 
   test("should fail if email already exists", async () => {
     // Arrange
-    const command: CreateUserCommand = {
-      firstName: "John",
-      lastName: "Doe",
-      email: "john.doe@example.com",
-    };
+    const command = new CreateUserCommand(
+      "John",
+      "Doe",
+      "john.doe@example.com",
+    );
 
-    (userRepository.existsByEmail as any).mockResolvedValue(ok(true));
+    (
+      userRepository.existsByEmail as Mock<typeof userRepository.existsByEmail>
+    ).mockResolvedValue(ok(true));
 
     // Act
     const result = await handler.handle(command);
 
     // Assert
     expect(result.ok).toBe(false);
-    expect(result.error).toBeInstanceOf(ConflictError);
+    if (!result.ok) {
+      expect(result.error).toBeInstanceOf(ConflictError);
+    }
     expect(userRepository.save).not.toHaveBeenCalled();
   });
 
   test("should fail if validation fails", async () => {
     // Arrange
-    const command: CreateUserCommand = {
-      firstName: "", // Invalid name
-      lastName: "Doe",
-      email: "invalid-email",
-    };
+    const command = new CreateUserCommand("", "Doe", "invalid-email");
 
-    (userRepository.existsByEmail as any).mockResolvedValue(ok(false));
+    (
+      userRepository.existsByEmail as Mock<typeof userRepository.existsByEmail>
+    ).mockResolvedValue(ok(false));
 
     // Act
     const result = await handler.handle(command);
 
     // Assert
     expect(result.ok).toBe(false);
-    expect(result.error).toBeInstanceOf(ValidationError);
+    if (!result.ok) {
+      expect(result.error).toBeInstanceOf(ValidationError);
+    }
     expect(userRepository.save).not.toHaveBeenCalled();
   });
 });

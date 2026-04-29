@@ -1,7 +1,7 @@
 import type { IUserRepository } from "@repo/application";
 import { Email, UniqueId, User, UserName } from "@repo/domain";
 import type { Optional, Result } from "@repo/shared";
-import { AppError, ok } from "@repo/shared";
+import { type AppError, ok } from "@repo/shared";
 import { count, eq, sql } from "drizzle-orm";
 import type { DrizzleDB } from "../database/drizzle.client.js";
 import { users } from "../database/schema.js";

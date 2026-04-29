@@ -1,4 +1,4 @@
-import type { Result, AppError } from "@repo/shared";
+import type { AppError, Result } from "@repo/shared";
 import type { Command } from "./command.js";
 
 /**

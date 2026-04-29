@@ -1,4 +1,4 @@
-import { NotFoundError, err, ok, isErr } from "@repo/shared";
+import { NotFoundError, err, isErr, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
 import type { QueryHandler } from "../../shared/query-handler.js";
 import type { UserDTO } from "../dto/user.dto.js";

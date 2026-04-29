@@ -1,4 +1,11 @@
-import { type Result, ValidationError, combine, err, isErr, ok } from "@repo/shared";
+import {
+  type Result,
+  type ValidationError,
+  combine,
+  err,
+  isErr,
+  ok,
+} from "@repo/shared";
 import { AggregateRoot } from "../../shared/aggregate-root.js";
 import { UniqueId } from "../../shared/identifier.js";
 import { UserActivatedEvent } from "../events/user-activated.event.js";
@@ -56,10 +63,13 @@ export class User extends AggregateRoot<UserProps> {
     );
     const emailResult = Email.create(createProps.email);
 
-    const result = combine([nameResult, emailResult]);
+    const result = combine<[UserName, Email], ValidationError>([
+      nameResult,
+      emailResult,
+    ]);
 
     if (isErr(result)) {
-      return err(result.error);
+      return err<User, ValidationError>(result.error);
     }
 
     const [name, email] = result.value;
@@ -161,7 +171,9 @@ export class User extends AggregateRoot<UserProps> {
       updatedAt: new Date(),
     };
 
-    this.addDomainEvent(new UserDeactivatedEvent(this.id.value, this.version + 1));
+    this.addDomainEvent(
+      new UserDeactivatedEvent(this.id.value, this.version + 1),
+    );
   }
 
   public activate(): void {
@@ -175,7 +187,9 @@ export class User extends AggregateRoot<UserProps> {
       updatedAt: new Date(),
     };
 
-    this.addDomainEvent(new UserActivatedEvent(this.id.value, this.version + 1));
+    this.addDomainEvent(
+      new UserActivatedEvent(this.id.value, this.version + 1),
+    );
   }
 
   public changeRole(role: UserRole): void {
@@ -196,4 +210,3 @@ export class User extends AggregateRoot<UserProps> {
     );
   }
 }
-

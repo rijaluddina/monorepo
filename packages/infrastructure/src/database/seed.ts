@@ -36,7 +36,7 @@ async function seed() {
       lastName: u.lastName,
       email: u.email,
       role: u.role.toLowerCase() as "admin" | "member" | "viewer",
-    });
+    }).unwrap();
 
     await db.insert(userTable).values({
       id: user.id.value,

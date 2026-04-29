@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { UserName } from "./user-name.vo.js";
 import { isErr, isOk } from "@repo/shared";
+import { UserName } from "./user-name.vo.js";
 
 describe("UserName Value Object", () => {
   test("should create a valid UserName", () => {
     const nameResult = UserName.create("John", "Doe");
-    
+
     expect(isOk(nameResult)).toBe(true);
     if (isOk(nameResult)) {
       expect(nameResult.value.firstName).toBe("John");
@@ -16,7 +16,7 @@ describe("UserName Value Object", () => {
 
   test("should trim first and last names", () => {
     const nameResult = UserName.create("  John  ", "  Doe  ");
-    
+
     expect(isOk(nameResult)).toBe(true);
     if (isOk(nameResult)) {
       expect(nameResult.value.firstName).toBe("John");

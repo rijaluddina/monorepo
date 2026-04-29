@@ -1,6 +1,6 @@
 import type { IUserEventStore } from "@repo/application";
 import type { DomainEvent } from "@repo/domain";
-import { AppError, ok } from "@repo/shared";
+import { type AppError, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
 import { asc, eq } from "drizzle-orm";
 import type { DrizzleDB } from "../database/drizzle.client.js";

@@ -1,6 +1,6 @@
 import type { DomainEvent } from "./domain-event.js";
 import { Entity } from "./entity.js";
-import type { UniqueId } from "./identifier.js";
+import type { UniqueId } from "./identifier.js"; // Not used
 
 /**
  * AggregateRoot<T> — Consistency boundary for a cluster of entities.

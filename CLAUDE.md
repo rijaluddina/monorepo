@@ -1,15 +1,15 @@
 # CLAUDE.md
 
-Guidance for code work in repo.
+Repo code work guidance.
 
 ## Quick Commands
 
-### Run from root (Turborepo)
-- `bun run dev` — start apps (api :3000, web :5173)
-- `bun run build` — build packages & apps
-- `bun run typecheck` — type check monorepo
+### Root (Turborepo)
+- `bun run dev` — start apps (api:3000, web:5173)
+- `bun run build` — build packages + apps
+- `bun run typecheck` — type monorepo
 - `bun run lint` — lint (Biome)
-- `bun run check` — Biome check + auto-fix
+- `bun run check` — Biome check + fix
 
 ### Database (infrastructure)
 - `bun run db:migrate` — apply Drizzle migrations
@@ -20,23 +20,23 @@ Guidance for code work in repo.
 - `cd apps/web && bun run dev` — Vite + React frontend
 
 ### Single test
-- `cd <package> && bun test <file>` — Bun test runner
+- `cd <package> && bun test <file>` — Bun runner
 
 ## Architecture
 
 Clean Architecture + DDD + CQRS + Event Sourcing. Turborepo + Bun.
 
 ### Dependency Rule (strict)
-Inner layers NEVER import outer layers:
+Inner layers NO import outer:
 
 ```
 Presentation (apps/api, apps/web)
-    ↓ dispatches Commands/Queries
+    ↓ dispatch Cmd/Query
 Application (packages/application)
-    ↓ calls Ports (interfaces)
-Infrastructure (packages/infrastructure) ← implements Ports
-    ↓ uses
-Domain (packages/domain) ← zero external deps
+    ↓ call Ports (interfaces)
+Infrastructure (packages/infrastructure) ← implement Ports
+    ↓ use
+Domain (packages/domain) ← zero deps
 ```
 
 ### Package Map
@@ -53,9 +53,9 @@ Domain (packages/domain) ← zero external deps
 
 ### Key Patterns
 
-**Result Monad** (`packages/shared/src/result.ts`): Biz errors return `Err`, never throw. Handle `Ok`/`Err`.
+**Result Monad** (`packages/shared/src/result.ts`): Biz errors return `Err`. Handle `Ok`/`Err`.
 
-**Dependency Inversion** (`packages/infrastructure/src/container/app-container.ts`): `AppContainer` is composition root. Wiring abstractions to impls.
+**Dependency Inversion** (`packages/infrastructure/src/container/app-container.ts`): `AppContainer` composition root. Wire abstractions to impls.
 
 **CQRS Flow** (create user):
 ```
@@ -74,7 +74,7 @@ POST /api/users
 
 **Event Sourcing**: Domain events in aggregate, append `event_store` table, publish bus.
 
-## Adding a New Bounded Context
+## Adding New Bounded Context
 
 1. **Domain** — `packages/domain/src/<context>/` (entities, VOs, events)
 2. **Application** — `packages/application/src/<context>/` (cmd, query, handlers, ports)
@@ -95,11 +95,11 @@ POST /api/users
 
 ## Environment
 
-Copy `.env.example` to `.env`. Key vars: `DATABASE_URL`, `VITE_API_URL`.
+Copy `.env.example` to `.env`. Keys: `DATABASE_URL`, `VITE_API_URL`.
 
 ## Notes
 
 - Manager: **Bun**. Use `bun run <script>`.
-- API docs: http://localhost:3000/docs (Swagger).
+- API docs: http://localhost:3000/docs (Scalar).
 - Inter-package imports: `@repo/*` scope.
 - Drizzle schema: `packages/infrastructure/src/database/schema.ts`.

@@ -1,5 +1,5 @@
 import type { DomainEvent } from "@repo/domain";
-import type { Result, AppError } from "@repo/shared";
+import type { AppError, Result } from "@repo/shared";
 
 /**
  * IEventBus — Port for publishing domain events.
@@ -7,7 +7,9 @@ import type { Result, AppError } from "@repo/shared";
  */
 export interface IEventBus {
   publish(event: DomainEvent): Promise<Result<void, AppError>>;
-  publishAll(events: ReadonlyArray<DomainEvent>): Promise<Result<void, AppError>>;
+  publishAll(
+    events: ReadonlyArray<DomainEvent>,
+  ): Promise<Result<void, AppError>>;
   subscribe(
     eventType: string,
     handler: (event: DomainEvent) => Promise<void>,

@@ -1,4 +1,4 @@
-import { ok, isErr, err } from "@repo/shared";
+import { err, isErr, ok } from "@repo/shared";
 import type { PaginatedResult, Result } from "@repo/shared";
 import type { QueryHandler } from "../../shared/query-handler.js";
 import type { UserDTO } from "../dto/user.dto.js";

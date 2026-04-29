@@ -94,7 +94,7 @@ cd apps/web && bun run dev    # http://localhost:5173
 ### 6. API Docs
 
 ```
-http://localhost:3000/docs   ← Swagger UI
+http://localhost:3000/docs   ← Scalar
 ```
 
 ---

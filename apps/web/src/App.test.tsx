@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import App from "./App";
 
 // Mock the hooks
@@ -30,9 +30,9 @@ describe("App", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <App />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
-    
+
     expect(screen.getAllByText(/Monorepo/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Production-Ready/i)).toBeInTheDocument();
   });
@@ -41,9 +41,9 @@ describe("App", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <App />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
-    
+
     expect(screen.getByText("Clean Architecture")).toBeInTheDocument();
     expect(screen.getByText("DDD")).toBeInTheDocument();
   });

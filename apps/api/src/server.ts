@@ -98,7 +98,7 @@ export function createServer() {
             async ({ query }) => {
               const result = await container.queryBus.ask<
                 GetUsersQuery,
-                Result<PaginatedResponse<UserDTO>>
+                PaginatedResponse<UserDTO>
               >(
                 new GetUsersQuery(
                   Number(query.page ?? 1),
@@ -126,7 +126,7 @@ export function createServer() {
             async ({ body, set }) => {
               const result = await container.commandBus.dispatch<
                 CreateUserCommand,
-                Result<UserDTO>
+                UserDTO
               >(
                 new CreateUserCommand(
                   body.firstName,
@@ -164,7 +164,7 @@ export function createServer() {
             async ({ params }) => {
               const result = await container.queryBus.ask<
                 GetUserByIdQuery,
-                Result<UserDTO>
+                UserDTO
               >(new GetUserByIdQuery(params.id));
               return result.unwrap();
             },

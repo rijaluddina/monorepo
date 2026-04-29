@@ -8,10 +8,10 @@ app.listen(PORT, () => {
   console.log(`
   ┌─────────────────────────────────────────────┐
   │                                             │
-  │   🚀 Monorepo API running                  │
+  │   🚀 Monorepo API running                   │
   │                                             │
-  │   HTTP  →  http://localhost:${PORT}           │
-  │   Docs  →  http://localhost:${PORT}/docs      │
+  │   HTTP  →  http://localhost:${PORT}         │
+  │   Docs  →  http://localhost:${PORT}/docs    │
   │                                             │
   └─────────────────────────────────────────────┘
   `);
