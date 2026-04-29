@@ -12,7 +12,7 @@ export interface IUserEventStore {
     events: ReadonlyArray<DomainEvent>,
   ): Promise<Result<void, AppError>>;
   /** Replay all events for a given aggregate (for reconstitution) */
-  getEvents(aggregateId: string): Promise<DomainEvent[]>;
+  getEvents(aggregateId: string): Promise<Result<DomainEvent[], AppError>>;
   /** Get all events of a specific type across all aggregates */
-  getEventsByType(eventType: string): Promise<DomainEvent[]>;
+  getEventsByType(eventType: string): Promise<Result<DomainEvent[], AppError>>;
 }

@@ -82,8 +82,10 @@ export class Err<T, E extends Error = Error> {
 }
 
 /** Shorthand factory for Ok */
-export function ok<T, E extends Error = Error>(value: T): Ok<T, E> {
-  return Ok.create<T, E>(value);
+export function ok(): Ok<void, never>;
+export function ok<T, E extends Error = Error>(value: T): Ok<T, E>;
+export function ok<T, E extends Error = Error>(value?: T): Ok<T, E> {
+  return Ok.create<T, E>(value as T);
 }
 
 /** Shorthand factory for Err */
@@ -110,13 +112,13 @@ export function isErr<T, E extends Error>(
  * If any result is an Err, the first Err is returned.
  * Otherwise, an Ok with an array of values is returned.
  */
-export function combine<T extends any[], E extends Error>(
+export function combine<T extends any[], E extends Error = Error>(
   results: { [K in keyof T]: Result<T[K], E> },
 ): Result<T, E> {
-  const values: T = [] as any;
+  const values = [] as unknown as T;
   for (const result of results) {
     if (isErr(result)) {
-      return err(result.error) as Result<T, E>;
+      return err<T, E>(result.error);
     }
     values.push(result.value);
   }

@@ -32,21 +32,25 @@ export class DrizzleEventStore implements IUserEventStore {
     return ok();
   }
 
-  async getEvents(aggregateId: string): Promise<DomainEvent[]> {
+  async getEvents(
+    aggregateId: string,
+  ): Promise<Result<DomainEvent[], AppError>> {
     const entries = await this.db.query.eventStore.findMany({
       where: eq(eventStore.aggregateId, aggregateId),
       orderBy: [asc(eventStore.version)],
     });
 
-    return entries.map((e) => e.payload as unknown as DomainEvent);
+    return ok(entries.map((e) => e.payload as unknown as DomainEvent));
   }
 
-  async getEventsByType(eventType: string): Promise<DomainEvent[]> {
+  async getEventsByType(
+    eventType: string,
+  ): Promise<Result<DomainEvent[], AppError>> {
     const entries = await this.db.query.eventStore.findMany({
       where: eq(eventStore.eventType, eventType),
       orderBy: [asc(eventStore.occurredAt)],
     });
 
-    return entries.map((e) => e.payload as unknown as DomainEvent);
+    return ok(entries.map((e) => e.payload as unknown as DomainEvent));
   }
 }

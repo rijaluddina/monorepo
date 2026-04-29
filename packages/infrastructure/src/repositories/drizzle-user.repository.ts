@@ -96,8 +96,8 @@ export class DrizzleUserRepository implements IUserRepository {
   }
 
   private toDomain(record: typeof users.$inferSelect): User {
-    const name = UserName.create(record.firstName, record.lastName);
-    const email = Email.create(record.email);
+    const name = UserName.create(record.firstName, record.lastName).unwrap();
+    const email = Email.create(record.email).unwrap();
     const role = record.role.toLowerCase() as "admin" | "member" | "viewer";
 
     return User.reconstitute(

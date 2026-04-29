@@ -129,7 +129,7 @@ export class User extends AggregateRoot<UserProps> {
 
     // Idempotency check
     if (email.value === oldEmail) {
-      return ok(undefined);
+      return ok();
     }
 
     this.props = {
@@ -147,7 +147,7 @@ export class User extends AggregateRoot<UserProps> {
       ),
     );
 
-    return ok(undefined);
+    return ok();
   }
 
   public deactivate(): void {
