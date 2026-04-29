@@ -20,12 +20,18 @@ export class InMemoryQueryBus implements IQueryBus {
     this.handlers.set(queryName, handler as unknown as AnyHandler);
   }
 
-  async ask<TQuery extends Query, TResult>(query: TQuery): Promise<Result<TResult>> {
+  async ask<TQuery extends Query, TResult>(query: TQuery): Promise<TResult> {
     const name = query.constructor.name;
     const handler = this.handlers.get(name);
     if (!handler) {
-      return err(new AppError(`No handler registered for query "${name}"`, "NO_HANDLER", 500));
+      throw new AppError(`No handler registered for query "${name}"`, "NO_HANDLER", 500);
     }
-    return handler.handle(query) as Promise<Result<TResult>>;
+
+    const result = await handler.handle(query);
+    if (result.isErr()) {
+      throw result.error;
+    }
+
+    return result.value as TResult;
   }
 }

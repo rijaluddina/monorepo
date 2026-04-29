@@ -50,11 +50,9 @@ export function createServer() {
         .get(
           "/",
           async ({ query }) => {
-            const result = await container.queryBus.ask(
+            return await container.queryBus.ask(
               new GetUsersQuery(Number(query.page ?? 1), Number(query.limit ?? 20)),
             );
-            if (result.isErr()) throw result.error;
-            return result.value;
           },
           {
             query: t.Object({
@@ -69,9 +67,7 @@ export function createServer() {
         .get(
           "/:id",
           async ({ params }) => {
-            const result = await container.queryBus.ask(new GetUserByIdQuery(params.id));
-            if (result.isErr()) throw result.error;
-            return result.value;
+            return await container.queryBus.ask(new GetUserByIdQuery(params.id));
           },
           {
             params: t.Object({ id: t.String() }),
@@ -83,12 +79,11 @@ export function createServer() {
         .post(
           "/",
           async ({ body, set }) => {
-            const result = await container.commandBus.dispatch(
+            const user = await container.commandBus.dispatch(
               new CreateUserCommand(body.firstName, body.lastName, body.email, body.role),
             );
-            if (result.isErr()) throw result.error;
             set.status = 201;
-            return result.value;
+            return user;
           },
           {
             body: t.Object({

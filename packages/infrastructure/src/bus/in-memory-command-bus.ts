@@ -24,12 +24,18 @@ export class InMemoryCommandBus implements ICommandBus {
 
   async dispatch<TCommand extends Command, TResult>(
     command: TCommand,
-  ): Promise<Result<TResult>> {
+  ): Promise<TResult> {
     const name = command.constructor.name;
     const handler = this.handlers.get(name);
     if (!handler) {
-      return err(new AppError(`No handler registered for command "${name}"`, "NO_HANDLER", 500));
+      throw new AppError(`No handler registered for command "${name}"`, "NO_HANDLER", 500);
     }
-    return handler.handle(command) as Promise<Result<TResult>>;
+
+    const result = await handler.handle(command);
+    if (result.isErr()) {
+      throw result.error;
+    }
+
+    return result.value as TResult;
   }
 }
