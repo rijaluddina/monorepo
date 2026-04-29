@@ -1,23 +1,18 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState } from "react";
 import type { UserDTO } from "@repo/application";
-import { userApi, type PaginatedResponse } from "./user.api.js";
+import { useUsers, useCreateUser } from "./user.api.js";
 
 // ─── Create User Form ──────────────────────────────────────────────────────
 
-interface CreateUserFormProps {
-  onCreated: () => void;
-}
-
-function CreateUserForm({ onCreated }: CreateUserFormProps) {
+function CreateUserForm() {
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
     email: "",
     role: "member" as "admin" | "member" | "viewer",
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const createUser = useCreateUser();
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -25,19 +20,14 @@ function CreateUserForm({ onCreated }: CreateUserFormProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
     setSuccess(false);
     try {
-      await userApi.create(form);
+      await createUser.mutateAsync(form);
       setForm({ firstName: "", lastName: "", email: "", role: "member" });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-      onCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create user");
-    } finally {
-      setLoading(false);
+      // Error is handled by useCreateUser and exposed via createUser.error
     }
   }
 
@@ -47,7 +37,11 @@ function CreateUserForm({ onCreated }: CreateUserFormProps) {
         <span className="card-title">➕ Create User</span>
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {createUser.isError && (
+        <div className="alert alert-error">
+          {createUser.error instanceof Error ? createUser.error.message : "Failed to create user"}
+        </div>
+      )}
       {success && <div className="alert alert-success">✓ User created successfully!</div>}
 
       <form onSubmit={handleSubmit} className="form-inner">
@@ -98,8 +92,8 @@ function CreateUserForm({ onCreated }: CreateUserFormProps) {
           </div>
         </div>
         <div className="form-actions">
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? "Creating…" : "Create User"}
+          <button type="submit" className="btn btn-primary" disabled={createUser.isPending}>
+            {createUser.isPending ? "Creating…" : "Create User"}
           </button>
         </div>
       </form>
@@ -141,48 +135,12 @@ function UserRow({ user }: { user: UserDTO }) {
 // ─── User List ─────────────────────────────────────────────────────────────
 
 export function UserList() {
-  const [data, setData] = useState<PaginatedResponse<UserDTO> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  const load = useCallback(async (currentPage: number) => {
-    // Cancel previous request if any
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await userApi.getAll(currentPage, 10, controller.signal);
-      setData(result);
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return;
-      setError(err instanceof Error ? err.message : "Failed to load users");
-    } finally {
-      if (!controller.signal.aborted) {
-        setLoading(false);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    void load(page);
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [load, page]);
+  const { data, isLoading, isError, error } = useUsers(page, 10);
 
   return (
     <>
-      <CreateUserForm onCreated={() => void load(page)} />
+      <CreateUserForm />
 
       <div className="card">
         <div className="card-header">
@@ -202,7 +160,7 @@ export function UserList() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
+            {isLoading && (
               <tr className="loading-row">
                 <td colSpan={4}>
                   <div className="spinner" />
@@ -210,14 +168,16 @@ export function UserList() {
                 </td>
               </tr>
             )}
-            {!loading && error && (
+            {!isLoading && isError && (
               <tr>
                 <td colSpan={4}>
-                  <div className="alert alert-error">{error}</div>
+                  <div className="alert alert-error">
+                    {error instanceof Error ? error.message : "Failed to load users"}
+                  </div>
                 </td>
               </tr>
             )}
-            {!loading && !error && data?.data.length === 0 && (
+            {!isLoading && !isError && data?.data.length === 0 && (
               <tr>
                 <td colSpan={4}>
                   <div className="empty-state">
@@ -227,7 +187,7 @@ export function UserList() {
                 </td>
               </tr>
             )}
-            {!loading && !error && data?.data.map((user) => (
+            {!isLoading && !isError && data?.data.map((user) => (
               <UserRow key={user.id} user={user} />
             ))}
           </tbody>
@@ -260,3 +220,4 @@ export function UserList() {
     </>
   );
 }
+
