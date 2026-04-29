@@ -1,6 +1,6 @@
-import { prisma } from "../database/prisma.client.js";
-import { PrismaUserRepository } from "../repositories/prisma-user.repository.js";
-import { PrismaEventStore } from "../event-store/prisma-event-store.js";
+import { db } from "../database/drizzle.client.js";
+import { DrizzleUserRepository } from "../repositories/drizzle-user.repository.js";
+import { DrizzleEventStore } from "../event-store/drizzle-event-store.js";
 import { InMemoryCommandBus } from "../bus/in-memory-command-bus.js";
 import { InMemoryQueryBus } from "../bus/in-memory-query-bus.js";
 import { InMemoryEventBus } from "../bus/in-memory-event-bus.js";
@@ -30,8 +30,8 @@ export class AppContainer {
 
   private constructor() {
     // ── Instantiate infrastructure implementations ──────────────────────
-    const userRepository = new PrismaUserRepository(prisma);
-    const eventStore = new PrismaEventStore(prisma);
+    const userRepository = new DrizzleUserRepository(db);
+    const eventStore = new DrizzleEventStore(db);
     const eventBus = new InMemoryEventBus();
     const commandBus = new InMemoryCommandBus();
     const queryBus = new InMemoryQueryBus();

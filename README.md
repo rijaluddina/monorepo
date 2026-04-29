@@ -1,6 +1,6 @@
 # 🚀 Monorepo Boilerplate
 
-> Turborepo + Bun · ElysiaJS + Vite/React · PostgreSQL + Prisma
+> Turborepo + Bun · ElysiaJS + Vite/React · PostgreSQL + Drizzle
 > Clean Architecture · DDD · CQRS · Event Sourcing · Repository Pattern · Dependency Inversion
 
 ---
@@ -13,7 +13,7 @@
 | Monorepo | Turborepo |
 | Backend | ElysiaJS |
 | Frontend | Vite + React 19 |
-| Database | PostgreSQL + Prisma |
+| Database | PostgreSQL + Drizzle |
 | Language | TypeScript (strict) |
 | Linter/Formatter | Biome |
 
@@ -29,7 +29,7 @@ monorepo/
 └── packages/
     ├── domain/        # Entities, VOs, Aggregates, Domain Events
     ├── application/   # CQRS Commands/Queries, Ports
-    ├── infrastructure/# Prisma repos, Event Store, Buses, DI Container
+    ├── infrastructure/# Drizzle repos, Event Store, Buses, DI Container
     ├── shared/        # Result monad, errors, types
     ├── ui/            # Shared React components
     └── typescript-config/
@@ -108,8 +108,8 @@ POST /api/users
       → CreateUserCommandHandler
           1. IUserRepository.existsByEmail()  ← guard
           2. User.create()                    ← domain aggregate
-          3. IUserRepository.save()           ← write model (Prisma)
-          4. IUserEventStore.append()         ← event store (Prisma)
+          3. IUserRepository.save()           ← write model (Drizzle)
+          4. IUserEventStore.append()         ← event store (Drizzle)
           5. IEventBus.publishAll()           ← event bus
         → Result<UserDTO>
       → 201 Created
@@ -121,7 +121,7 @@ POST /api/users
 
 1. **Domain** — add `packages/domain/src/<context>/`
 2. **Application** — add commands, queries, ports under `packages/application/src/<context>/`
-3. **Infrastructure** — add Prisma model + repo + register in `AppContainer`
+3. **Infrastructure** — add Drizzle model + repo + register in `AppContainer`
 4. **API** — add Elysia route group in `apps/api/src/server.ts`
 
 ---

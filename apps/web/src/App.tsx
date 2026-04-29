@@ -28,7 +28,7 @@ export default function App() {
           <p className="hero-eyebrow">Turborepo + Bun</p>
           <h1>Production-Ready<br />Monorepo Boilerplate</h1>
           <p className="hero-sub">
-            ElysiaJS backend · Vite + React frontend · PostgreSQL + Prisma · Full DDD architecture
+            ElysiaJS backend · Vite + React frontend · PostgreSQL + Drizzle · Full DDD architecture
           </p>
           <div className="arch-badges">
             {ARCH_BADGES.map((b) => (

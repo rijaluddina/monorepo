@@ -11,26 +11,25 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check ./src",
     "clean": "rm -rf dist",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
     "db:seed": "bun run src/database/seed.ts"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "drizzle-orm": "^0.38.0",
+    "pg": "^8.20.0",
     "@repo/application": "*",
     "@repo/domain": "*",
-    "@repo/shared": "*",
-    "pg": "^8.20.0"
+    "@repo/shared": "*"
   },
   "devDependencies": {
+    "drizzle-kit": "^0.30.0",
     "@repo/typescript-config": "*",
     "@types/pg": "^8.20.0",
     "bun-types": "latest",
     "dotenv": "^17.4.2",
-    "prisma": "^7.8.0",
     "typescript": "^5.7.0"
   }
 }

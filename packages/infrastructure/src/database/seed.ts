@@ -1,20 +1,21 @@
-import { prisma } from "../database/prisma.client.js";
+import { db, pool } from "./drizzle.client.js";
+import { users as userTable, eventStore } from "./schema.js";
 import { User } from "@repo/domain";
 
 async function seed() {
   console.log("🌱 Seeding database...");
 
   // Clean slate
-  await prisma.eventStoreEntry.deleteMany();
-  await prisma.user.deleteMany();
+  await db.delete(eventStore);
+  await db.delete(userTable);
 
-  const users = [
+  const rawUsers = [
     { firstName: "Alice", lastName: "Admin", email: "alice@example.com", role: "ADMIN" as const },
     { firstName: "Bob", lastName: "Member", email: "bob@example.com", role: "MEMBER" as const },
     { firstName: "Carol", lastName: "Viewer", email: "carol@example.com", role: "VIEWER" as const },
   ];
 
-  for (const u of users) {
+  for (const u of rawUsers) {
     const user = User.create({
       firstName: u.firstName,
       lastName: u.lastName,
@@ -22,24 +23,22 @@ async function seed() {
       role: u.role.toLowerCase() as "admin" | "member" | "viewer",
     });
 
-    await prisma.user.create({
-      data: {
-        id: user.id.value,
-        firstName: user.name.firstName,
-        lastName: user.name.lastName,
-        email: user.email.value,
-        role: u.role,
-        isActive: user.isActive,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      },
+    await db.insert(userTable).values({
+      id: user.id.value,
+      firstName: user.name.firstName,
+      lastName: user.name.lastName,
+      email: user.email.value,
+      role: u.role,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     });
 
     console.log(`  ✓ Created ${user.name.fullName} (${user.email.value})`);
   }
 
   console.log("✅ Seed complete.");
-  await prisma.$disconnect();
+  await pool.end();
 }
 
 seed().catch((e) => {

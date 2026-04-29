@@ -2,7 +2,7 @@ import type { User } from "@repo/domain";
 import type { Optional } from "@repo/shared";
 
 /**
- * IUserRepository — Port. Infrastructure implements with Prisma+PostgreSQL.
+ * IUserRepository — Port. Infrastructure implements with Drizzle+PostgreSQL.
  * Application layer depends on this interface, NOT the implementation.
  */
 export interface IUserRepository {
