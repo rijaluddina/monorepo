@@ -1,8 +1,41 @@
-import { Elysia, t } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
+import {
+  CreateUserCommand,
+  GetUserByIdQuery,
+  GetUsersQuery,
+} from "@repo/application";
 import { AppContainer } from "@repo/infrastructure";
-import { CreateUserCommand, GetUsersQuery, GetUserByIdQuery } from "@repo/application";
+import { Elysia, t } from "elysia";
+
+const UserSchema = t.Object(
+  {
+    id: t.String(),
+    firstName: t.String(),
+    lastName: t.String(),
+    fullName: t.String(),
+    email: t.String({ format: "email" }),
+    role: t.Union([
+      t.Literal("admin"),
+      t.Literal("member"),
+      t.Literal("viewer"),
+    ]),
+    isActive: t.Boolean(),
+    createdAt: t.String({ format: "date-time" }),
+  },
+  { description: "User data" },
+);
+
+const PaginatedUserResponse = t.Object(
+  {
+    data: t.Array(UserSchema),
+    total: t.Number(),
+    page: t.Number(),
+    limit: t.Number(),
+    totalPages: t.Number(),
+  },
+  { description: "Paginated user list response" },
+);
 
 /**
  * createServer — builds and returns the Elysia app instance.
@@ -27,7 +60,8 @@ export function createServer() {
           info: {
             title: "Monorepo API",
             version: "1.0.0",
-            description: "ElysiaJS API — Clean Architecture, DDD, CQRS, Event Sourcing",
+            description:
+              "ElysiaJS API — Clean Architecture, DDD, CQRS, Event Sourcing",
           },
         },
         path: "/docs",
@@ -51,14 +85,18 @@ export function createServer() {
           "/",
           async ({ query }) => {
             return await container.queryBus.ask(
-              new GetUsersQuery(Number(query.page ?? 1), Number(query.limit ?? 20)),
+              new GetUsersQuery(
+                Number(query.page ?? 1),
+                Number(query.limit ?? 20),
+              ),
             );
           },
           {
             query: t.Object({
-              page: t.Optional(t.String()),
-              limit: t.Optional(t.String()),
+              page: t.Optional(t.Numeric({ default: 1 })),
+              limit: t.Optional(t.Numeric({ default: 20 })),
             }),
+            response: PaginatedUserResponse,
             detail: { tags: ["Users"], summary: "List all users (paginated)" },
           },
         )
@@ -67,10 +105,13 @@ export function createServer() {
         .get(
           "/:id",
           async ({ params }) => {
-            return await container.queryBus.ask(new GetUserByIdQuery(params.id));
+            return await container.queryBus.ask(
+              new GetUserByIdQuery(params.id),
+            );
           },
           {
             params: t.Object({ id: t.String() }),
+            response: UserSchema,
             detail: { tags: ["Users"], summary: "Get user by ID" },
           },
         )
@@ -80,7 +121,12 @@ export function createServer() {
           "/",
           async ({ body, set }) => {
             const user = await container.commandBus.dispatch(
-              new CreateUserCommand(body.firstName, body.lastName, body.email, body.role),
+              new CreateUserCommand(
+                body.firstName,
+                body.lastName,
+                body.email,
+                body.role,
+              ),
             );
             set.status = 201;
             return user;
@@ -90,8 +136,17 @@ export function createServer() {
               firstName: t.String({ minLength: 1 }),
               lastName: t.String({ minLength: 1 }),
               email: t.String({ format: "email" }),
-              role: t.Optional(t.Union([t.Literal("admin"), t.Literal("member"), t.Literal("viewer")])),
+              role: t.Optional(
+                t.Union([
+                  t.Literal("admin"),
+                  t.Literal("member"),
+                  t.Literal("viewer"),
+                ]),
+              ),
             }),
+            response: {
+              201: UserSchema,
+            },
             detail: { tags: ["Users"], summary: "Create a new user" },
           },
         ),
@@ -99,7 +154,11 @@ export function createServer() {
 
     // ── Global error handler ────────────────────────────────────────────
     .onError(({ error, set }) => {
-      const appError = error as { statusCode?: number; code?: string; message: string };
+      const appError = error as {
+        statusCode?: number;
+        code?: string;
+        message: string;
+      };
       const status = appError.statusCode ?? 500;
       set.status = status;
       return {
