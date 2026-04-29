@@ -15,6 +15,7 @@
     "@repo/application": "*",
     "@repo/shared": "*",
     "@repo/ui": "*",
+    "@tanstack/react-query": "^5.100.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
