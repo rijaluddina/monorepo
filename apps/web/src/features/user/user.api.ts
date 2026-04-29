@@ -1,4 +1,5 @@
 import type { UserDTO } from "@repo/application";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const API_BASE = "/api";
 
@@ -48,4 +49,29 @@ export const userApi = {
 
   create: (body: { firstName: string; lastName: string; email: string; role?: string }, signal?: AbortSignal) =>
     request<UserDTO>("/users", { method: "POST", body: JSON.stringify(body), signal }),
+};
+
+export const userKeys = {
+  all: ['users'] as const,
+  lists: () => [...userKeys.all, 'list'] as const,
+  list: (page: number, limit: number) => [...userKeys.lists(), { page, limit }] as const,
+  details: () => [...userKeys.all, 'detail'] as const,
+  detail: (id: string) => [...userKeys.details(), id] as const,
+};
+
+export const useUsers = (page = 1, limit = 10) => {
+  return useQuery({
+    queryKey: userKeys.list(page, limit),
+    queryFn: ({ signal }) => userApi.getAll(page, limit, signal),
+  });
+};
+
+export const useCreateUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof userApi.create>[0]) => userApi.create(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    },
+  });
 };
