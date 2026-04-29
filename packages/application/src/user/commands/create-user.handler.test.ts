@@ -21,16 +21,16 @@ describe("CreateUserCommandHandler", () => {
       findAll: mock(),
       update: mock(),
       delete: mock(),
-    } as any;
+    } as unknown as IUserRepository;
 
     eventStore = {
       append: mock(),
-    } as any;
+    } as unknown as IUserEventStore;
 
     eventBus = {
       publish: mock(),
       publishAll: mock(),
-    } as any;
+    } as unknown as IEventBus;
 
     handler = new CreateUserCommandHandler(userRepository, eventStore, eventBus);
   });
@@ -46,8 +46,8 @@ describe("CreateUserCommandHandler", () => {
 
     (userRepository.existsByEmail as any).mockResolvedValue(ok(false));
     (userRepository.save as any).mockResolvedValue(ok(undefined));
-    (eventStore.append as any).mockResolvedValue(undefined);
-    (eventBus.publishAll as any).mockResolvedValue(undefined);
+    (eventStore.append as any).mockResolvedValue(ok(undefined));
+    (eventBus.publishAll as any).mockResolvedValue(ok(undefined));
 
     // Act
     const result = await handler.handle(command);

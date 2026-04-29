@@ -63,10 +63,19 @@ export class CreateUserCommandHandler
     }
 
     // 4. Append events to event store (Event Sourcing)
-    await this.eventStore.append(user.id.value, user.domainEvents);
+    const appendResult = await this.eventStore.append(
+      user.id.value,
+      user.domainEvents,
+    );
+    if (isErr(appendResult)) {
+      return err(appendResult.error);
+    }
 
     // 5. Publish events to bus (async event-driven reactions)
-    await this.eventBus.publishAll(user.domainEvents);
+    const publishResult = await this.eventBus.publishAll(user.domainEvents);
+    if (isErr(publishResult)) {
+      return err(publishResult.error);
+    }
 
     // 6. Clear events from aggregate memory
     user.clearEvents();

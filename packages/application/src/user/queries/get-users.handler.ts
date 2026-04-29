@@ -1,4 +1,4 @@
-import { ok } from "@repo/shared";
+import { ok, isErr, err } from "@repo/shared";
 import type { PaginatedResult, Result } from "@repo/shared";
 import type { QueryHandler } from "../../shared/query-handler.js";
 import type { UserDTO } from "../dto/user.dto.js";
@@ -14,12 +14,18 @@ export class GetUsersQueryHandler
   async handle(
     query: GetUsersQuery,
   ): Promise<Result<PaginatedResult<UserDTO>>> {
-    const { users, total } = await this.userRepository.findAll({
+    const result = await this.userRepository.findAll({
       page: query.page,
       limit: query.limit,
     });
 
-    const result: PaginatedResult<UserDTO> = {
+    if (isErr(result)) {
+      return err(result.error);
+    }
+
+    const { users, total } = result.value;
+
+    const paginatedResult: PaginatedResult<UserDTO> = {
       data: users.map(mapUserToDTO),
       total,
       page: query.page,
@@ -27,6 +33,6 @@ export class GetUsersQueryHandler
       totalPages: Math.ceil(total / query.limit),
     };
 
-    return ok(result);
+    return ok(paginatedResult);
   }
 }

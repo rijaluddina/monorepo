@@ -6,14 +6,19 @@ import type { Optional, Result, AppError } from "@repo/shared";
  * Application layer depends on this interface, NOT the implementation.
  */
 export interface IUserRepository {
-  findById(id: string): Promise<Optional<User>>;
-  findByEmail(email: string): Promise<Optional<User>>;
-  findAll(params?: { page?: number; limit?: number }): Promise<{
-    users: User[];
-    total: number;
-  }>;
+  findById(id: string): Promise<Result<Optional<User>, AppError>>;
+  findByEmail(email: string): Promise<Result<Optional<User>, AppError>>;
+  findAll(params?: { page?: number; limit?: number }): Promise<
+    Result<
+      {
+        users: User[];
+        total: number;
+      },
+      AppError
+    >
+  >;
   save(user: User): Promise<Result<void, AppError>>;
-  update(user: User): Promise<void>;
-  delete(id: string): Promise<void>;
+  update(user: User): Promise<Result<void, AppError>>;
+  delete(id: string): Promise<Result<void, AppError>>;
   existsByEmail(email: string): Promise<Result<boolean, AppError>>;
 }

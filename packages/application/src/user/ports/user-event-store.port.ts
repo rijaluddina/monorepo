@@ -1,4 +1,5 @@
 import type { DomainEvent } from "@repo/domain";
+import type { Result, AppError } from "@repo/shared";
 
 /**
  * IUserEventStore — Port for Event Sourcing persistence.
@@ -9,7 +10,7 @@ export interface IUserEventStore {
   append(
     aggregateId: string,
     events: ReadonlyArray<DomainEvent>,
-  ): Promise<void>;
+  ): Promise<Result<void, AppError>>;
   /** Replay all events for a given aggregate (for reconstitution) */
   getEvents(aggregateId: string): Promise<DomainEvent[]>;
   /** Get all events of a specific type across all aggregates */
