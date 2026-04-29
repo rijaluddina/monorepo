@@ -1,7 +1,7 @@
 import type { ICommandBus } from "@repo/application";
 import type { Command } from "@repo/application";
 import type { Result } from "@repo/shared";
-import { AppError, err } from "@repo/shared";
+import { AppError, err, ok } from "@repo/shared";
 
 type AnyHandler = { handle(cmd: Command): Promise<Result<unknown>> };
 
@@ -24,22 +24,24 @@ export class InMemoryCommandBus implements ICommandBus {
 
   async dispatch<TCommand extends Command, TResult>(
     command: TCommand,
-  ): Promise<TResult> {
+  ): Promise<Result<TResult, AppError>> {
     const name = command.constructor.name;
     const handler = this.handlers.get(name);
     if (!handler) {
-      throw new AppError(
-        `No handler registered for command "${name}"`,
-        "NO_HANDLER",
-        500,
+      return err(
+        new AppError(
+          `No handler registered for command "${name}"`,
+          "NO_HANDLER",
+          500,
+        ),
       );
     }
 
     const result = await handler.handle(command);
     if (result.isErr()) {
-      throw result.error;
+      return err(result.error as AppError);
     }
 
-    return result.value as TResult;
+    return ok(result.value as TResult);
   }
 }

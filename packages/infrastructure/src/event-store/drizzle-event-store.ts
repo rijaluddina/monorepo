@@ -1,5 +1,7 @@
 import type { IUserEventStore } from "@repo/application";
 import type { DomainEvent } from "@repo/domain";
+import { AppError, ok } from "@repo/shared";
+import type { Result } from "@repo/shared";
 import { asc, eq } from "drizzle-orm";
 import type { DrizzleDB } from "../database/drizzle.client.js";
 import { eventStore } from "../database/schema.js";
@@ -13,8 +15,8 @@ export class DrizzleEventStore implements IUserEventStore {
   async append(
     aggregateId: string,
     events: ReadonlyArray<DomainEvent>,
-  ): Promise<void> {
-    if (events.length === 0) return;
+  ): Promise<Result<void, AppError>> {
+    if (events.length === 0) return ok();
 
     await this.db.insert(eventStore).values(
       events.map((event) => ({
@@ -26,6 +28,8 @@ export class DrizzleEventStore implements IUserEventStore {
         occurredAt: event.occurredAt,
       })),
     );
+
+    return ok();
   }
 
   async getEvents(aggregateId: string): Promise<DomainEvent[]> {

@@ -1,6 +1,7 @@
 import type { IUserRepository } from "@repo/application";
 import { Email, UniqueId, User, UserName } from "@repo/domain";
-import type { Optional } from "@repo/shared";
+import type { Optional, Result } from "@repo/shared";
+import { AppError, ok } from "@repo/shared";
 import { count, eq, sql } from "drizzle-orm";
 import type { DrizzleDB } from "../database/drizzle.client.js";
 import { users } from "../database/schema.js";
@@ -11,26 +12,26 @@ import { users } from "../database/schema.js";
 export class DrizzleUserRepository implements IUserRepository {
   constructor(private readonly db: DrizzleDB) {}
 
-  async findById(id: string): Promise<Optional<User>> {
+  async findById(id: string): Promise<Result<Optional<User>, AppError>> {
     const record = await this.db.query.users.findFirst({
       where: eq(users.id, id),
     });
-    if (!record) return undefined;
-    return this.toDomain(record);
+    if (!record) return ok(undefined);
+    return ok(this.toDomain(record));
   }
 
-  async findByEmail(email: string): Promise<Optional<User>> {
+  async findByEmail(email: string): Promise<Result<Optional<User>, AppError>> {
     const record = await this.db.query.users.findFirst({
       where: eq(users.email, email),
     });
-    if (!record) return undefined;
-    return this.toDomain(record);
+    if (!record) return ok(undefined);
+    return ok(this.toDomain(record));
   }
 
   async findAll(params?: {
     page?: number;
     limit?: number;
-  }): Promise<{ users: User[]; total: number }> {
+  }): Promise<Result<{ users: User[]; total: number }, AppError>> {
     const page = params?.page ?? 1;
     const limit = params?.limit ?? 20;
     const offset = (page - 1) * limit;
@@ -46,13 +47,13 @@ export class DrizzleUserRepository implements IUserRepository {
 
     const total = Number(totalResult[0]?.value ?? 0);
 
-    return {
+    return ok({
       users: records.map((r) => this.toDomain(r)),
       total,
-    };
+    });
   }
 
-  async save(user: User): Promise<void> {
+  async save(user: User): Promise<Result<void, AppError>> {
     await this.db.insert(users).values({
       id: user.id.value,
       firstName: user.name.firstName,
@@ -63,9 +64,10 @@ export class DrizzleUserRepository implements IUserRepository {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });
+    return ok();
   }
 
-  async update(user: User): Promise<void> {
+  async update(user: User): Promise<Result<void, AppError>> {
     await this.db
       .update(users)
       .set({
@@ -77,18 +79,20 @@ export class DrizzleUserRepository implements IUserRepository {
         updatedAt: user.updatedAt,
       })
       .where(eq(users.id, user.id.value));
+    return ok();
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(id: string): Promise<Result<void, AppError>> {
     await this.db.delete(users).where(eq(users.id, id));
+    return ok();
   }
 
-  async existsByEmail(email: string): Promise<boolean> {
+  async existsByEmail(email: string): Promise<Result<boolean, AppError>> {
     const record = await this.db.query.users.findFirst({
       where: eq(users.email, email),
       columns: { id: true },
     });
-    return record !== undefined;
+    return ok(record !== undefined);
   }
 
   private toDomain(record: typeof users.$inferSelect): User {

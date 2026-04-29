@@ -1,3 +1,4 @@
+import type { Result, AppError } from "@repo/shared";
 import type { Command } from "./command.js";
 
 /**
@@ -7,12 +8,12 @@ import type { Command } from "./command.js";
 export interface ICommandBus {
   dispatch<TCommand extends Command, TResult>(
     command: TCommand,
-  ): Promise<TResult>;
+  ): Promise<Result<TResult, AppError>>;
   register<TCommand extends Command, TResult>(
     commandName: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     handler: {
-      handle(cmd: TCommand): Promise<import("@repo/shared").Result<TResult>>;
+      handle(cmd: TCommand): Promise<Result<TResult>>;
     },
   ): void;
 }

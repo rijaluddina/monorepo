@@ -1,6 +1,6 @@
 import type { IQueryBus, Query } from "@repo/application";
 import type { Result } from "@repo/shared";
-import { AppError, err } from "@repo/shared";
+import { AppError, err, ok } from "@repo/shared";
 
 type AnyHandler = { handle(q: Query): Promise<Result<unknown>> };
 
@@ -20,22 +20,26 @@ export class InMemoryQueryBus implements IQueryBus {
     this.handlers.set(queryName, handler as unknown as AnyHandler);
   }
 
-  async ask<TQuery extends Query, TResult>(query: TQuery): Promise<TResult> {
+  async ask<TQuery extends Query, TResult>(
+    query: TQuery,
+  ): Promise<Result<TResult, AppError>> {
     const name = query.constructor.name;
     const handler = this.handlers.get(name);
     if (!handler) {
-      throw new AppError(
-        `No handler registered for query "${name}"`,
-        "NO_HANDLER",
-        500,
+      return err(
+        new AppError(
+          `No handler registered for query "${name}"`,
+          "NO_HANDLER",
+          500,
+        ),
       );
     }
 
     const result = await handler.handle(query);
     if (result.isErr()) {
-      throw result.error;
+      return err(result.error as AppError);
     }
 
-    return result.value as TResult;
+    return ok(result.value as TResult);
   }
 }

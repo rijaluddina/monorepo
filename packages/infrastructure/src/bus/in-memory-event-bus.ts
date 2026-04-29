@@ -1,5 +1,6 @@
 import type { IEventBus } from "@repo/application";
 import type { DomainEvent } from "@repo/domain";
+import { type AppError, type Result, ok } from "@repo/shared";
 
 type EventHandler = (event: DomainEvent) => Promise<void>;
 
@@ -17,12 +18,16 @@ export class InMemoryEventBus implements IEventBus {
     this.handlers.set(eventType, [...existing, handler]);
   }
 
-  async publish(event: DomainEvent): Promise<void> {
+  async publish(event: DomainEvent): Promise<Result<void, AppError>> {
     const handlers = this.handlers.get(event.eventType) ?? [];
     await Promise.all(handlers.map((h) => h(event)));
+    return ok(undefined);
   }
 
-  async publishAll(events: ReadonlyArray<DomainEvent>): Promise<void> {
+  async publishAll(
+    events: ReadonlyArray<DomainEvent>,
+  ): Promise<Result<void, AppError>> {
     await Promise.all(events.map((e) => this.publish(e)));
+    return ok(undefined);
   }
 }
