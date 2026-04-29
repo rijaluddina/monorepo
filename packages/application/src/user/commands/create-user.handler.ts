@@ -1,5 +1,5 @@
 import { User } from "@repo/domain";
-import { ConflictError, err, ok } from "@repo/shared";
+import { ConflictError, err, isErr, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
 import type { CommandHandler } from "../../shared/command-handler.js";
 import type { IEventBus } from "../../shared/event-bus.port.js";
@@ -31,23 +31,36 @@ export class CreateUserCommandHandler
 
   async handle(command: CreateUserCommand): Promise<Result<UserDTO>> {
     // 1. Guard: duplicate email
-    const exists = await this.userRepository.existsByEmail(command.email);
-    if (exists) {
+    const existsResult = await this.userRepository.existsByEmail(command.email);
+    if (isErr(existsResult)) {
+      return err(existsResult.error);
+    }
+
+    if (existsResult.value) {
       return err(
         new ConflictError(`Email "${command.email}" already registered`),
       );
     }
 
     // 2. Create aggregate — domain validates, emits events
-    const user = User.create({
+    const userResult = User.create({
       firstName: command.firstName,
       lastName: command.lastName,
       email: command.email,
       role: command.role,
     });
 
+    if (isErr(userResult)) {
+      return err(userResult.error);
+    }
+
+    const user = userResult.value;
+
     // 3. Persist to DB (write model)
-    await this.userRepository.save(user);
+    const saveResult = await this.userRepository.save(user);
+    if (isErr(saveResult)) {
+      return err(saveResult.error);
+    }
 
     // 4. Append events to event store (Event Sourcing)
     await this.eventStore.append(user.id.value, user.domainEvents);

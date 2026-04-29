@@ -1,5 +1,5 @@
 import type { User } from "@repo/domain";
-import type { Optional } from "@repo/shared";
+import type { Optional, Result, AppError } from "@repo/shared";
 
 /**
  * IUserRepository — Port. Infrastructure implements with Drizzle+PostgreSQL.
@@ -12,8 +12,8 @@ export interface IUserRepository {
     users: User[];
     total: number;
   }>;
-  save(user: User): Promise<void>;
+  save(user: User): Promise<Result<void, AppError>>;
   update(user: User): Promise<void>;
   delete(id: string): Promise<void>;
-  existsByEmail(email: string): Promise<boolean>;
+  existsByEmail(email: string): Promise<Result<boolean, AppError>>;
 }
