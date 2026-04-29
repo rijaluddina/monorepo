@@ -1,4 +1,4 @@
-import { ValidationError } from "@repo/shared";
+import { type Result, ValidationError, err, ok } from "@repo/shared";
 import { ValueObject } from "../../shared/value-object.js";
 
 interface EmailProps {
@@ -15,8 +15,16 @@ export class Email extends ValueObject<EmailProps> {
     super(props);
   }
 
-  public static create(email: string): Email {
-    return new Email({ value: email.trim().toLowerCase() });
+  public static create(email: string): Result<Email, ValidationError> {
+    try {
+      const vo = new Email({ value: email.trim().toLowerCase() });
+      return ok(vo);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return err(error);
+      }
+      throw error;
+    }
   }
 
   protected validate(props: EmailProps): void {

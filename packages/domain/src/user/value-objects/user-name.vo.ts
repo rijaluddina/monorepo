@@ -1,4 +1,4 @@
-import { ValidationError } from "@repo/shared";
+import { type Result, ValidationError, err, ok } from "@repo/shared";
 import { ValueObject } from "../../shared/value-object.js";
 
 interface UserNameProps {
@@ -17,11 +17,22 @@ export class UserName extends ValueObject<UserNameProps> {
     super(props);
   }
 
-  public static create(firstName: string, lastName: string): UserName {
-    return new UserName({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-    });
+  public static create(
+    firstName: string,
+    lastName: string,
+  ): Result<UserName, ValidationError> {
+    try {
+      const vo = new UserName({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      });
+      return ok(vo);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return err(error);
+      }
+      throw error;
+    }
   }
 
   protected validate(props: UserNameProps): void {

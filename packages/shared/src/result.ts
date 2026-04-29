@@ -104,3 +104,21 @@ export function isErr<T, E extends Error>(
 ): result is Err<T, E> {
   return result.ok === false;
 }
+
+/**
+ * Combine multiple results into a single result.
+ * If any result is an Err, the first Err is returned.
+ * Otherwise, an Ok with an array of values is returned.
+ */
+export function combine<T extends any[], E extends Error>(
+  results: { [K in keyof T]: Result<T[K], E> },
+): Result<T, E> {
+  const values: T = [] as any;
+  for (const result of results) {
+    if (isErr(result)) {
+      return err(result.error) as Result<T, E>;
+    }
+    values.push(result.value);
+  }
+  return ok(values);
+}

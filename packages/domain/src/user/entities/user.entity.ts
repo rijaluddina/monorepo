@@ -1,3 +1,4 @@
+import { type Result, ValidationError, combine, err, isErr, ok } from "@repo/shared";
 import { AggregateRoot } from "../../shared/aggregate-root.js";
 import { UniqueId } from "../../shared/identifier.js";
 import { UserCreatedEvent } from "../events/user-created.event.js";
@@ -39,12 +40,26 @@ export class User extends AggregateRoot<UserProps> {
   /**
    * Named constructor — creates a new User and raises UserCreatedEvent.
    */
-  public static create(createProps: CreateUserProps, id?: UniqueId): User {
+  public static create(
+    createProps: CreateUserProps,
+    id?: UniqueId,
+  ): Result<User, ValidationError> {
     const userId = id ?? new UniqueId();
     const now = new Date();
 
-    const name = UserName.create(createProps.firstName, createProps.lastName);
-    const email = Email.create(createProps.email);
+    const nameResult = UserName.create(
+      createProps.firstName,
+      createProps.lastName,
+    );
+    const emailResult = Email.create(createProps.email);
+
+    const result = combine([nameResult, emailResult]);
+
+    if (isErr(result)) {
+      return err(result.error);
+    }
+
+    const [name, email] = result.value;
 
     const props: UserProps = {
       name,
@@ -61,7 +76,7 @@ export class User extends AggregateRoot<UserProps> {
       new UserCreatedEvent(userId.value, name, email, user.version + 1),
     );
 
-    return user;
+    return ok(user);
   }
 
   /**
@@ -100,8 +115,13 @@ export class User extends AggregateRoot<UserProps> {
 
   // ─── Commands (state mutations) ───────────────────────────────────────
 
-  public changeEmail(newEmail: string): void {
-    const email = Email.create(newEmail);
+  public changeEmail(newEmail: string): Result<void, ValidationError> {
+    const emailResult = Email.create(newEmail);
+    if (isErr(emailResult)) {
+      return err(emailResult.error);
+    }
+
+    const email = emailResult.value;
     const oldEmail = this.props.email.value;
 
     this.props = {
@@ -118,6 +138,8 @@ export class User extends AggregateRoot<UserProps> {
         this.version + 1,
       ),
     );
+
+    return ok(undefined);
   }
 
   public deactivate(): void {
