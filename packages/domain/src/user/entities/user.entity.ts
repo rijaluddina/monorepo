@@ -1,8 +1,11 @@
 import { type Result, ValidationError, combine, err, isErr, ok } from "@repo/shared";
 import { AggregateRoot } from "../../shared/aggregate-root.js";
 import { UniqueId } from "../../shared/identifier.js";
+import { UserActivatedEvent } from "../events/user-activated.event.js";
 import { UserCreatedEvent } from "../events/user-created.event.js";
+import { UserDeactivatedEvent } from "../events/user-deactivated.event.js";
 import { UserEmailChangedEvent } from "../events/user-email-changed.event.js";
+import { UserRoleChangedEvent } from "../events/user-role-changed.event.js";
 import { Email } from "../value-objects/email.vo.js";
 import { UserName } from "../value-objects/user-name.vo.js";
 
@@ -124,6 +127,11 @@ export class User extends AggregateRoot<UserProps> {
     const email = emailResult.value;
     const oldEmail = this.props.email.value;
 
+    // Idempotency check
+    if (email.value === oldEmail) {
+      return ok(undefined);
+    }
+
     this.props = {
       ...this.props,
       email,
@@ -143,26 +151,49 @@ export class User extends AggregateRoot<UserProps> {
   }
 
   public deactivate(): void {
+    if (!this.props.isActive) {
+      return;
+    }
+
     this.props = {
       ...this.props,
       isActive: false,
       updatedAt: new Date(),
     };
+
+    this.addDomainEvent(new UserDeactivatedEvent(this.id.value, this.version + 1));
   }
 
   public activate(): void {
+    if (this.props.isActive) {
+      return;
+    }
+
     this.props = {
       ...this.props,
       isActive: true,
       updatedAt: new Date(),
     };
+
+    this.addDomainEvent(new UserActivatedEvent(this.id.value, this.version + 1));
   }
 
   public changeRole(role: UserRole): void {
+    if (this.props.role === role) {
+      return;
+    }
+
+    const oldRole = this.props.role;
+
     this.props = {
       ...this.props,
       role,
       updatedAt: new Date(),
     };
+
+    this.addDomainEvent(
+      new UserRoleChangedEvent(this.id.value, oldRole, role, this.version + 1),
+    );
   }
 }
+

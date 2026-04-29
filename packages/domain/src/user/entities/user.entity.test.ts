@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { User } from "./user.entity.js";
-import { isOk } from "@repo/shared";
+import { isErr, isOk } from "@repo/shared";
 import { UserCreatedEvent } from "../events/user-created.event.js";
+import { UserEmailChangedEvent } from "../events/user-email-changed.event.js";
+import { UserActivatedEvent } from "../events/user-activated.event.js";
+import { UserDeactivatedEvent } from "../events/user-deactivated.event.js";
+import { UserRoleChangedEvent } from "../events/user-role-changed.event.js";
 
 describe("User Entity", () => {
   test("should create a user and emit UserCreatedEvent", () => {
@@ -39,5 +43,148 @@ describe("User Entity", () => {
     });
 
     expect(isOk(userResult)).toBe(false);
+  });
+
+  describe("changeEmail", () => {
+    test("should change email and emit UserEmailChangedEvent", () => {
+      const user = User.create({
+        firstName: "John",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+      }).value as User;
+
+      user.clearEvents();
+      
+      const result = user.changeEmail("new.email@example.com");
+      expect(isOk(result)).toBe(true);
+      expect(user.email.value).toBe("new.email@example.com");
+      
+      const events = user.domainEvents;
+      expect(events.length).toBe(1);
+      expect(events[0]).toBeInstanceOf(UserEmailChangedEvent);
+      const event = events[0] as UserEmailChangedEvent;
+      expect(event.oldEmail).toBe("john.doe@example.com");
+      expect(event.newEmail).toBe("new.email@example.com");
+    });
+
+    test("should not emit event if email is the same (idempotency)", () => {
+      const user = User.create({
+        firstName: "John",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+      }).value as User;
+
+      user.clearEvents();
+      
+      const result = user.changeEmail("john.doe@example.com");
+      expect(isOk(result)).toBe(true);
+      expect(user.domainEvents.length).toBe(0);
+    });
+
+    test("should fail with invalid email", () => {
+      const user = User.create({
+        firstName: "John",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+      }).value as User;
+
+      const result = user.changeEmail("invalid-email");
+      expect(isErr(result)).toBe(true);
+    });
+  });
+
+  describe("activation/deactivation", () => {
+    test("should deactivate user and emit UserDeactivatedEvent", () => {
+      const user = User.create({
+        firstName: "John",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+      }).value as User;
+
+      user.clearEvents();
+      user.deactivate();
+      
+      expect(user.isActive).toBe(false);
+      expect(user.domainEvents.length).toBe(1);
+      expect(user.domainEvents[0]).toBeInstanceOf(UserDeactivatedEvent);
+    });
+
+    test("should not emit event if already deactivated", () => {
+      const user = User.create({
+        firstName: "John",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+      }).value as User;
+
+      user.deactivate();
+      user.clearEvents();
+      user.deactivate();
+      
+      expect(user.domainEvents.length).toBe(0);
+    });
+
+    test("should activate user and emit UserActivatedEvent", () => {
+      const user = User.create({
+        firstName: "John",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+      }).value as User;
+
+      user.deactivate();
+      user.clearEvents();
+      user.activate();
+      
+      expect(user.isActive).toBe(true);
+      expect(user.domainEvents.length).toBe(1);
+      expect(user.domainEvents[0]).toBeInstanceOf(UserActivatedEvent);
+    });
+
+    test("should not emit event if already active", () => {
+      const user = User.create({
+        firstName: "John",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+      }).value as User;
+
+      user.clearEvents();
+      user.activate();
+      
+      expect(user.domainEvents.length).toBe(0);
+    });
+  });
+
+  describe("changeRole", () => {
+    test("should change role and emit UserRoleChangedEvent", () => {
+      const user = User.create({
+        firstName: "John",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+        role: "member",
+      }).value as User;
+
+      user.clearEvents();
+      user.changeRole("admin");
+      
+      expect(user.role).toBe("admin");
+      expect(user.domainEvents.length).toBe(1);
+      expect(user.domainEvents[0]).toBeInstanceOf(UserRoleChangedEvent);
+      const event = user.domainEvents[0] as UserRoleChangedEvent;
+      expect(event.oldRole).toBe("member");
+      expect(event.newRole).toBe("admin");
+    });
+
+    test("should not emit event if role is the same", () => {
+      const user = User.create({
+        firstName: "John",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+        role: "member",
+      }).value as User;
+
+      user.clearEvents();
+      user.changeRole("member");
+      
+      expect(user.domainEvents.length).toBe(0);
+    });
   });
 });
