@@ -4,7 +4,7 @@ import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
 // Manually load .env from root
-const rootEnvPath = path.resolve(import.meta.dirname, "../../.env");
+const rootEnvPath = path.resolve(process.cwd(), "../../.env");
 config({ path: rootEnvPath });
 
 export default defineConfig({
