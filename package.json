@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "@repo/monorepo",
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
