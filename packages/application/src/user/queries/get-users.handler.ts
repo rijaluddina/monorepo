@@ -1,10 +1,10 @@
 import { err, isErr, ok } from "@repo/shared";
 import type { PaginatedResult, Result } from "@repo/shared";
-import type { QueryHandler } from "../../shared/query-handler.js";
-import type { UserDTO } from "../dto/user.dto.js";
-import type { IUserRepository } from "../ports/user-repository.port.js";
-import { mapUserToDTO } from "../user.mapper.js";
-import type { GetUsersQuery } from "./get-users.query.js";
+import type { QueryHandler } from "../../shared/query-handler.ts";
+import type { UserDTO } from "../dto/user.dto.ts";
+import type { IUserRepository } from "../ports/user-repository.port.ts";
+import { mapUserToDTO } from "../user.mapper.ts";
+import type { GetUsersQuery } from "./get-users.query.ts";
 
 export class GetUsersQueryHandler
   implements QueryHandler<GetUsersQuery, PaginatedResult<UserDTO>>

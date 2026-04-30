@@ -3,8 +3,8 @@ import { Email, UniqueId, User, UserName } from "@repo/domain";
 import type { Optional, Result } from "@repo/shared";
 import { type AppError, ok } from "@repo/shared";
 import { count, eq, sql } from "drizzle-orm";
-import type { DrizzleDB } from "../database/drizzle.client.js";
-import { users } from "../database/schema.js";
+import type { DrizzleDB } from "../database/drizzle.client.ts";
+import { users } from "../database/schema.ts";
 
 /**
  * DrizzleUserRepository — implements IUserRepository via Drizzle + PostgreSQL.

@@ -1,4 +1,4 @@
-import { BaseDomainEvent } from "../../shared/domain-event.js";
+import { BaseDomainEvent } from "../../shared/domain-event.ts";
 
 export const USER_DEACTIVATED = "UserDeactivated" as const;
 

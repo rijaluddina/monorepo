@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { isErr, isOk } from "@repo/shared";
-import { Email } from "./email.vo.js";
+import { Email } from "./email.vo.ts";
 
 describe("Email Value Object", () => {
   test("should create a valid email", () => {

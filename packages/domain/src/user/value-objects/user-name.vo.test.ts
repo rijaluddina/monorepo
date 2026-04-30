@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { isErr, isOk } from "@repo/shared";
-import { UserName } from "./user-name.vo.js";
+import { UserName } from "./user-name.vo.ts";
 
 describe("UserName Value Object", () => {
   test("should create a valid UserName", () => {

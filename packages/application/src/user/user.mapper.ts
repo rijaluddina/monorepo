@@ -1,5 +1,5 @@
 import type { User } from "@repo/domain";
-import type { UserDTO } from "./dto/user.dto.js";
+import type { UserDTO } from "./dto/user.dto.ts";
 
 /** Map domain User aggregate → serializable UserDTO */
 export function mapUserToDTO(user: User): UserDTO {

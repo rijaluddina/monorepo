@@ -1,5 +1,5 @@
 import { type Result, ValidationError, err, ok } from "@repo/shared";
-import { ValueObject } from "../../shared/value-object.js";
+import { ValueObject } from "../../shared/value-object.ts";
 
 interface EmailProps {
   value: string;

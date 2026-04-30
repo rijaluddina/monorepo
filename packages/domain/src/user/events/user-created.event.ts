@@ -1,6 +1,6 @@
-import { BaseDomainEvent } from "../../shared/domain-event.js";
-import type { Email } from "../value-objects/email.vo.js";
-import type { UserName } from "../value-objects/user-name.vo.js";
+import { BaseDomainEvent } from "../../shared/domain-event.ts";
+import type { Email } from "../value-objects/email.vo.ts";
+import type { UserName } from "../value-objects/user-name.vo.ts";
 
 export const USER_CREATED = "UserCreated" as const;
 

@@ -1,13 +1,13 @@
 import { User } from "@repo/domain";
 import { ConflictError, err, isErr, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
-import type { CommandHandler } from "../../shared/command-handler.js";
-import type { IEventBus } from "../../shared/event-bus.port.js";
-import type { UserDTO } from "../dto/user.dto.js";
-import type { IUserEventStore } from "../ports/user-event-store.port.js";
-import type { IUserRepository } from "../ports/user-repository.port.js";
-import { mapUserToDTO } from "../user.mapper.js";
-import type { CreateUserCommand } from "./create-user.command.js";
+import type { CommandHandler } from "../../shared/command-handler.ts";
+import type { IEventBus } from "../../shared/event-bus.port.ts";
+import type { UserDTO } from "../dto/user.dto.ts";
+import type { IUserEventStore } from "../ports/user-event-store.port.ts";
+import type { IUserRepository } from "../ports/user-repository.port.ts";
+import { mapUserToDTO } from "../user.mapper.ts";
+import type { CreateUserCommand } from "./create-user.command.ts";
 
 /**
  * CreateUserCommandHandler — orchestrates user creation.

@@ -1,5 +1,5 @@
 import type { AppError, Result } from "@repo/shared";
-import type { Query } from "./query.js";
+import type { Query } from "./query.ts";
 
 /**
  * IQueryBus — Port (Dependency Inversion).

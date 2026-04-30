@@ -6,15 +6,15 @@ import {
   isErr,
   ok,
 } from "@repo/shared";
-import { AggregateRoot } from "../../shared/aggregate-root.js";
-import { UniqueId } from "../../shared/identifier.js";
-import { UserActivatedEvent } from "../events/user-activated.event.js";
-import { UserCreatedEvent } from "../events/user-created.event.js";
-import { UserDeactivatedEvent } from "../events/user-deactivated.event.js";
-import { UserEmailChangedEvent } from "../events/user-email-changed.event.js";
-import { UserRoleChangedEvent } from "../events/user-role-changed.event.js";
-import { Email } from "../value-objects/email.vo.js";
-import { UserName } from "../value-objects/user-name.vo.js";
+import { AggregateRoot } from "../../shared/aggregate-root.ts";
+import { UniqueId } from "../../shared/identifier.ts";
+import { UserActivatedEvent } from "../events/user-activated.event.ts";
+import { UserCreatedEvent } from "../events/user-created.event.ts";
+import { UserDeactivatedEvent } from "../events/user-deactivated.event.ts";
+import { UserEmailChangedEvent } from "../events/user-email-changed.event.ts";
+import { UserRoleChangedEvent } from "../events/user-role-changed.event.ts";
+import { Email } from "../value-objects/email.vo.ts";
+import { UserName } from "../value-objects/user-name.vo.ts";
 
 export type UserRole = "admin" | "member" | "viewer";
 

@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { isErr, isOk } from "@repo/shared";
-import { UserActivatedEvent } from "../events/user-activated.event.js";
-import { UserCreatedEvent } from "../events/user-created.event.js";
-import { UserDeactivatedEvent } from "../events/user-deactivated.event.js";
-import { UserEmailChangedEvent } from "../events/user-email-changed.event.js";
-import { UserRoleChangedEvent } from "../events/user-role-changed.event.js";
-import { User } from "./user.entity.js";
+import { UserActivatedEvent } from "../events/user-activated.event.ts";
+import { UserCreatedEvent } from "../events/user-created.event.ts";
+import { UserDeactivatedEvent } from "../events/user-deactivated.event.ts";
+import { UserEmailChangedEvent } from "../events/user-email-changed.event.ts";
+import { UserRoleChangedEvent } from "../events/user-role-changed.event.ts";
+import { User } from "./user.entity.ts";
 
 describe("User Entity", () => {
   test("should create a user and emit UserCreatedEvent", () => {

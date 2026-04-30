@@ -1,4 +1,4 @@
-import type { Query } from "../../shared/query.js";
+import type { Query } from "../../shared/query.ts";
 
 export class GetUsersQuery implements Query {
   public readonly _type = "Query" as const;

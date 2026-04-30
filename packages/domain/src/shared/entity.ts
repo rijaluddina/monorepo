@@ -1,4 +1,4 @@
-import type { UniqueId } from "./identifier.js";
+import type { UniqueId } from "./identifier.ts";
 
 /**
  * Entity<T> — A domain object identified by its unique ID.

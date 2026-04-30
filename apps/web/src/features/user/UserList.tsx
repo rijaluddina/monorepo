@@ -1,6 +1,6 @@
 import type { UserDTO } from "@repo/application";
 import { useState } from "react";
-import { useCreateUser, useUsers } from "./user.api.js";
+import { useCreateUser, useUsers } from "./user.api.ts";
 
 // ─── Create User Form ──────────────────────────────────────────────────────
 

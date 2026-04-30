@@ -3,8 +3,8 @@ import type { DomainEvent } from "@repo/domain";
 import { type AppError, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
 import { asc, eq } from "drizzle-orm";
-import type { DrizzleDB } from "../database/drizzle.client.js";
-import { eventStore } from "../database/schema.js";
+import type { DrizzleDB } from "../database/drizzle.client.ts";
+import { eventStore } from "../database/schema.ts";
 
 /**
  * DrizzleEventStore — implements IUserEventStore.

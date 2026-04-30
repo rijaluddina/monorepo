@@ -1,4 +1,4 @@
-import { createServer } from "./server.js";
+import { createServer } from "./server.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
 
@@ -17,4 +17,4 @@ app.listen(PORT, () => {
   `);
 });
 
-export type { App } from "./server.js";
+export type { App } from "./server.ts";

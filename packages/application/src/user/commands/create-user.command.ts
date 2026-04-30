@@ -1,5 +1,5 @@
 import type { UserRole } from "@repo/domain";
-import type { Command } from "../../shared/command.js";
+import type { Command } from "../../shared/command.ts";
 
 export class CreateUserCommand implements Command {
   public readonly _type = "Command" as const;

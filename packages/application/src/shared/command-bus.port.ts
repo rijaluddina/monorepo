@@ -1,5 +1,5 @@
 import type { AppError, Result } from "@repo/shared";
-import type { Command } from "./command.js";
+import type { Command } from "./command.ts";
 
 /**
  * ICommandBus — Port (Dependency Inversion).
