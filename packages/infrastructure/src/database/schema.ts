@@ -30,6 +30,7 @@ export const users = pgTable(
       .defaultNow(),
     updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" })
       .notNull()
+      .defaultNow()
       .$onUpdate(() => new Date()),
   },
   (table) => [uniqueIndex("users_email_key").on(table.email)],

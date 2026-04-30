@@ -16,7 +16,7 @@ CREATE TABLE "users" (
 	"role" "user_role" DEFAULT 'MEMBER' NOT NULL,
 	"isActive" boolean DEFAULT true NOT NULL,
 	"createdAt" timestamp (3) DEFAULT now() NOT NULL,
-	"updatedAt" timestamp (3) NOT NULL
+	"updatedAt" timestamp (3) DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE INDEX "event_store_aggregateId_idx" ON "event_store" USING btree ("aggregateId");--> statement-breakpoint
