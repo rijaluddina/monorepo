@@ -1,4 +1,3 @@
-import "dotenv/config";
 import path from "node:path";
 import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -6,7 +5,7 @@ import pg from "pg";
 import * as schema from "./schema.js";
 
 // Manually load .env from root
-const rootEnvPath = path.resolve(import.meta.dirname, "../../../../.env");
+const rootEnvPath = path.resolve(process.cwd(), "../../.env");
 config({ path: rootEnvPath });
 
 const databaseUrl = process.env.DATABASE_URL;
