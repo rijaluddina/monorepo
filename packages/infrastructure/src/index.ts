@@ -1,8 +1,8 @@
-export { db, pool } from "./database/drizzle.client.js";
-export * from "./database/schema.js";
-export { DrizzleUserRepository } from "./repositories/drizzle-user.repository.js";
-export { DrizzleEventStore } from "./event-store/drizzle-event-store.js";
-export { InMemoryCommandBus } from "./bus/in-memory-command-bus.js";
-export { InMemoryQueryBus } from "./bus/in-memory-query-bus.js";
-export { InMemoryEventBus } from "./bus/in-memory-event-bus.js";
-export { AppContainer } from "./container/app-container.js";
+export { db, pool } from "./database/drizzle.client.ts";
+export * from "./database/schema.ts";
+export { DrizzleUserRepository } from "./repositories/drizzle-user.repository.ts";
+export { DrizzleEventStore } from "./event-store/drizzle-event-store.ts";
+export { InMemoryCommandBus } from "./bus/in-memory-command-bus.ts";
+export { InMemoryQueryBus } from "./bus/in-memory-query-bus.ts";
+export { InMemoryEventBus } from "./bus/in-memory-event-bus.ts";
+export { AppContainer } from "./container/app-container.ts";

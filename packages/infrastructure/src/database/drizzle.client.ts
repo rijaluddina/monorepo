@@ -2,7 +2,7 @@ import path from "node:path";
 import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import * as schema from "./schema.js";
+import * as schema from "./schema.ts";
 
 // Manually load .env from root
 const rootEnvPath = path.resolve(process.cwd(), "../../.env");

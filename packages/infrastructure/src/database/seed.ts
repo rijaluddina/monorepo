@@ -1,6 +1,6 @@
 import { User } from "@repo/domain";
-import { db, pool } from "./drizzle.client.js";
-import { eventStore, users as userTable } from "./schema.js";
+import { db, pool } from "./drizzle.client.ts";
+import { eventStore, users as userTable } from "./schema.ts";
 
 async function seed() {
   console.log("🌱 Seeding database...");

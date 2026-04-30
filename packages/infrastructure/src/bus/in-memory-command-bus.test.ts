@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
 import type { Command } from "@repo/application";
 import { AppError, err, ok } from "@repo/shared";
-import { InMemoryCommandBus } from "./in-memory-command-bus.js";
+import { InMemoryCommandBus } from "./in-memory-command-bus.ts";
 
 class TestCommand implements Command {
   readonly _type = "Command";
