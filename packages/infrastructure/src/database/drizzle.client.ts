@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema.ts";
 
-// Manually load .env from root
+// Load .env from workspace root
 const rootEnvPath = path.resolve(process.cwd(), "../../.env");
 config({ path: rootEnvPath });
 

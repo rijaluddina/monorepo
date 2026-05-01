@@ -2,7 +2,7 @@ import path from "node:path";
 import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-// Manually load .env from root
+// Load .env from workspace root
 const rootEnvPath = path.resolve(process.cwd(), "../../.env");
 config({ path: rootEnvPath });
 

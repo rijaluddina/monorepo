@@ -31,6 +31,9 @@ export type Primitive =
 /** A plain JS object (record) */
 export type PlainObject = Record<string, unknown>;
 
+/** Opaque handle for persistence transactions/sessions */
+export type PersistenceContext = Record<string, unknown>;
+
 /** Pagination params */
 export interface PaginationParams {
   page: number;
