@@ -1,4 +1,4 @@
-import { UserList } from "./features/user/UserList.ts";
+import { UserList } from "./features/user/UserList";
 
 const ARCH_BADGES = [
   "Clean Architecture",
