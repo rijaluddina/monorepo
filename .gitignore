@@ -11,3 +11,4 @@ generated
 # local worktrees
 .worktrees/
 docs/superpowers
+.worktrees/
