@@ -1,6 +1,6 @@
+import { type Result, ok } from "@repo/shared";
 import type { DomainEvent } from "./domain-event.ts";
 import { Entity } from "./entity.ts";
-import type { UniqueId } from "./identifier.ts"; // Not used
 
 /**
  * AggregateRoot<T> — Consistency boundary for a cluster of entities.
@@ -37,16 +37,20 @@ export abstract class AggregateRoot<T> extends Entity<T> {
    * This method must be implemented by concrete aggregates to update
    * their internal state based on the event type.
    */
-  protected abstract apply(event: DomainEvent): void;
+  // biome-ignore lint/suspicious/noExplicitAny: error type can vary by domain
+  protected abstract apply(event: DomainEvent): Result<void, any>;
 
   /**
    * Replay a stream of domain events to reconstitute the aggregate state.
    * Used for Event Sourcing reconstitution.
    */
-  public replay(events: DomainEvent[]): void {
+  // biome-ignore lint/suspicious/noExplicitAny: error type can vary by domain
+  public replay(events: DomainEvent[]): Result<void, any> {
     for (const event of events) {
-      this.apply(event);
+      const result = this.apply(event);
+      if (result.isErr()) return result;
       this._version = event.version;
     }
+    return ok(undefined);
   }
 }

@@ -20,15 +20,15 @@ export const users = pgTable(
   "users",
   {
     id: text("id").primaryKey(),
-    firstName: text("firstName").notNull(),
-    lastName: text("lastName").notNull(),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
     email: text("email").notNull(),
     role: userRoleEnum("role").notNull().default("MEMBER"),
-    isActive: boolean("isActive").notNull().default(true),
-    createdAt: timestamp("createdAt", { precision: 3, mode: "date" })
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { precision: 3, mode: "date" })
       .notNull()
       .defaultNow(),
-    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" })
+    updatedAt: timestamp("updated_at", { precision: 3, mode: "date" })
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
@@ -42,17 +42,17 @@ export const eventStore = pgTable(
   "event_store",
   {
     id: text("id").primaryKey(),
-    aggregateId: text("aggregateId").notNull(),
-    eventType: text("eventType").notNull(),
+    aggregateId: text("aggregate_id").notNull(),
+    eventType: text("event_type").notNull(),
     payload: jsonb("payload").notNull(),
     version: integer("version").notNull(),
-    occurredAt: timestamp("occurredAt", {
+    occurredAt: timestamp("occurred_at", {
       precision: 3,
       mode: "date",
     }).notNull(),
   },
   (table) => [
-    index("event_store_aggregateId_idx").on(table.aggregateId),
-    index("event_store_eventType_idx").on(table.eventType),
+    index("event_store_aggregate_id_idx").on(table.aggregateId),
+    index("event_store_event_type_idx").on(table.eventType),
   ],
 );

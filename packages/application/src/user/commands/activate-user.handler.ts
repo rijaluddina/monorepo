@@ -3,6 +3,7 @@ import type { Result } from "@repo/shared";
 import type { CommandHandler } from "../../shared/command-handler.ts";
 import type { IEventBus } from "../../shared/event-bus.port.ts";
 import type { IEventStore } from "../../shared/event-store.port.ts";
+import type { IUnitOfWork } from "../../shared/unit-of-work.port.ts";
 import type { IUserRepository } from "../ports/user-repository.port.ts";
 import type { ActivateUserCommand } from "./activate-user.command.ts";
 
@@ -13,6 +14,7 @@ export class ActivateUserCommandHandler
     private readonly userRepository: IUserRepository,
     private readonly eventStore: IEventStore,
     private readonly eventBus: IEventBus,
+    private readonly unitOfWork: IUnitOfWork,
   ) {}
 
   async handle(command: ActivateUserCommand): Promise<Result<void>> {
@@ -28,17 +30,22 @@ export class ActivateUserCommandHandler
 
     user.activate();
 
-    const saveResult = await this.userRepository.save(user);
-    if (isErr(saveResult)) {
-      return err(saveResult.error);
-    }
+    const transactionResult = await this.unitOfWork.run(async (ctx) => {
+      const saveResult = await this.userRepository.save(user, ctx);
+      if (isErr(saveResult)) return err(saveResult.error);
 
-    const appendResult = await this.eventStore.append(
-      user.id.value,
-      user.domainEvents,
-    );
-    if (isErr(appendResult)) {
-      return err(appendResult.error);
+      const appendResult = await this.eventStore.append(
+        user.id.value,
+        user.domainEvents,
+        ctx,
+      );
+      if (isErr(appendResult)) return err(appendResult.error);
+
+      return ok(undefined);
+    });
+
+    if (isErr(transactionResult)) {
+      return err(transactionResult.error);
     }
 
     const publishResult = await this.eventBus.publishAll(user.domainEvents);

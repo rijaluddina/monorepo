@@ -1,9 +1,10 @@
 import { User } from "@repo/domain";
-import { ConflictError, err, isErr, ok } from "@repo/shared";
+import { type AppError, ConflictError, err, isErr, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
 import type { CommandHandler } from "../../shared/command-handler.ts";
 import type { IEventBus } from "../../shared/event-bus.port.ts";
 import type { IEventStore } from "../../shared/event-store.port.ts";
+import type { IUnitOfWork } from "../../shared/unit-of-work.port.ts";
 import type { UserDTO } from "../dto/user.dto.ts";
 import type { IUserRepository } from "../ports/user-repository.port.ts";
 import { mapUserToDTO } from "../user.mapper.ts";
@@ -27,22 +28,21 @@ export class CreateUserCommandHandler
     private readonly userRepository: IUserRepository,
     private readonly eventStore: IEventStore,
     private readonly eventBus: IEventBus,
+    private readonly unitOfWork: IUnitOfWork,
   ) {}
 
-  async handle(command: CreateUserCommand): Promise<Result<UserDTO>> {
-    // 1. Guard: duplicate email
+  async handle(command: CreateUserCommand): Promise<Result<UserDTO, AppError>> {
+    // 1. Check for duplicates
     const existsResult = await this.userRepository.existsByEmail(command.email);
-    if (isErr(existsResult)) {
-      return err(existsResult.error);
-    }
+    if (isErr(existsResult)) return err(existsResult.error);
 
     if (existsResult.value) {
       return err(
-        new ConflictError(`Email "${command.email}" already registered`),
+        new ConflictError(`User with email "${command.email}" already exists`),
       );
     }
 
-    // 2. Create aggregate — domain validates, emits events
+    // 2. Build domain entity
     const userResult = User.create({
       firstName: command.firstName,
       lastName: command.lastName,
@@ -56,19 +56,25 @@ export class CreateUserCommandHandler
 
     const user = userResult.value;
 
-    // 3. Persist to DB (write model)
-    const saveResult = await this.userRepository.save(user);
-    if (isErr(saveResult)) {
-      return err(saveResult.error);
-    }
+    // ─── Transactional Boundary ──────────────────────────────────────────
+    const transactionResult = await this.unitOfWork.run(async (ctx) => {
+      // 3. Persist to DB (write model)
+      const saveResult = await this.userRepository.save(user, ctx);
+      if (isErr(saveResult)) return err(saveResult.error);
 
-    // 4. Append events to event store (Event Sourcing)
-    const appendResult = await this.eventStore.append(
-      user.id.value,
-      user.domainEvents,
-    );
-    if (isErr(appendResult)) {
-      return err(appendResult.error);
+      // 4. Append events to event store (Event Sourcing)
+      const appendResult = await this.eventStore.append(
+        user.id.value,
+        user.domainEvents,
+        ctx,
+      );
+      if (isErr(appendResult)) return err(appendResult.error);
+
+      return ok(undefined);
+    });
+
+    if (isErr(transactionResult)) {
+      return err(transactionResult.error);
     }
 
     // 5. Publish events to bus (async event-driven reactions)
@@ -80,6 +86,7 @@ export class CreateUserCommandHandler
     // 6. Clear events from aggregate memory
     user.clearEvents();
 
+    // 7. Return DTO
     return ok(mapUserToDTO(user));
   }
 }

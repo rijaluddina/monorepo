@@ -9,8 +9,8 @@ import { User } from "./user.entity.ts";
 describe("User Aggregate Reconstitution", () => {
   it("should reconstitute user from events", () => {
     const userId = new UniqueId();
-    const name = UserName.create("John", "Doe").value as UserName;
-    const email = Email.create("john@example.com").value as Email;
+    const name = UserName.create("John", "Doe").unwrap();
+    const email = Email.create("john@example.com").unwrap();
     const role = "member";
 
     const events = [
@@ -23,7 +23,8 @@ describe("User Aggregate Reconstitution", () => {
       ),
     ];
 
-    const user = User.fromEvents(events, userId);
+    const userResult = User.fromEvents(events, userId);
+    const user = userResult.unwrap();
 
     expect(user.id.equals(userId)).toBe(true);
     expect(user.name.firstName).toBe("John");

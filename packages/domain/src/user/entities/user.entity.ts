@@ -125,10 +125,14 @@ export class User extends AggregateRoot<UserProps> {
   /**
    * Reconstitute a User from a stream of domain events.
    */
-  public static fromEvents(events: DomainEvent[], id: UniqueId): User {
+  public static fromEvents(
+    events: DomainEvent[],
+    id: UniqueId,
+  ): Result<User, ValidationError> {
     const user = new User(null as unknown as UserProps, id);
-    user.replay(events);
-    return user;
+    const result = user.replay(events);
+    if (isErr(result)) return err(result.error);
+    return ok(user);
   }
 
   // ─── Getters ──────────────────────────────────────────────────────────
@@ -243,28 +247,43 @@ export class User extends AggregateRoot<UserProps> {
 
   // ─── Event Sourcing ───────────────────────────────────────────────────
 
-  protected apply(event: DomainEvent): void {
+  protected apply(event: DomainEvent): Result<void, ValidationError> {
     // biome-ignore lint/suspicious/noExplicitAny: needed for event sourcing reconstitution from serialized events
     const payload = event as any;
 
     switch (event.eventType) {
-      case USER_CREATED:
+      case USER_CREATED: {
+        const nameResult = UserName.create(payload.firstName, payload.lastName);
+        const emailResult = Email.create(payload.email);
+        const result = combine<[UserName, Email], ValidationError>([
+          nameResult,
+          emailResult,
+        ]);
+
+        if (isErr(result)) return err(result.error);
+        const [name, email] = result.value;
+
         this.props = {
-          name: UserName.create(payload.firstName, payload.lastName).unwrap(),
-          email: Email.create(payload.email).unwrap(),
+          name,
+          email,
           role: payload.role,
           isActive: true,
           createdAt: event.occurredAt,
           updatedAt: event.occurredAt,
         };
         break;
-      case USER_EMAIL_CHANGED:
+      }
+      case USER_EMAIL_CHANGED: {
+        const emailResult = Email.create(payload.newEmail);
+        if (isErr(emailResult)) return err(emailResult.error);
+
         this.props = {
           ...this.props,
-          email: Email.create(payload.newEmail).unwrap(),
+          email: emailResult.value,
           updatedAt: event.occurredAt,
         };
         break;
+      }
       case USER_DEACTIVATED:
         this.props = {
           ...this.props,
@@ -287,5 +306,6 @@ export class User extends AggregateRoot<UserProps> {
         };
         break;
     }
+    return ok(undefined);
   }
 }
