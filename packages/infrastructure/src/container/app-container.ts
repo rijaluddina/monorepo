@@ -2,6 +2,9 @@ import {
   CreateUserCommandHandler,
   GetUserByIdQueryHandler,
   GetUsersQueryHandler,
+  type ICommandBus,
+  type IEventBus,
+  type IQueryBus,
 } from "@repo/application";
 import { InMemoryCommandBus } from "../bus/in-memory-command-bus.ts";
 import { InMemoryEventBus } from "../bus/in-memory-event-bus.ts";
@@ -24,9 +27,9 @@ import { DrizzleUserRepository } from "../repositories/drizzle-user.repository.t
 export class AppContainer {
   private static instance: AppContainer;
 
-  public readonly commandBus: InMemoryCommandBus;
-  public readonly queryBus: InMemoryQueryBus;
-  public readonly eventBus: InMemoryEventBus;
+  public readonly commandBus: ICommandBus;
+  public readonly queryBus: IQueryBus;
+  public readonly eventBus: IEventBus;
 
   private constructor() {
     // ── Instantiate infrastructure implementations ──────────────────────
