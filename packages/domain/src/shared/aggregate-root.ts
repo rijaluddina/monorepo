@@ -13,7 +13,7 @@ import type { UniqueId } from "./identifier.ts"; // Not used
  */
 export abstract class AggregateRoot<T> extends Entity<T> {
   private _domainEvents: DomainEvent[] = [];
-  private _version = 0;
+  protected _version = 0;
 
   get domainEvents(): ReadonlyArray<DomainEvent> {
     return this._domainEvents;
@@ -30,5 +30,23 @@ export abstract class AggregateRoot<T> extends Entity<T> {
 
   public clearEvents(): void {
     this._domainEvents = [];
+  }
+
+  /**
+   * Apply a domain event to the aggregate state.
+   * This method must be implemented by concrete aggregates to update
+   * their internal state based on the event type.
+   */
+  protected abstract apply(event: DomainEvent): void;
+
+  /**
+   * Replay a stream of domain events to reconstitute the aggregate state.
+   * Used for Event Sourcing reconstitution.
+   */
+  public replay(events: DomainEvent[]): void {
+    for (const event of events) {
+      this.apply(event);
+      this._version = event.version;
+    }
   }
 }

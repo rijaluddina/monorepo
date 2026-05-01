@@ -30,7 +30,8 @@ describe("User Entity", () => {
 
       const event = events[0] as UserCreatedEvent;
       expect(event.aggregateId).toBe(user.id.value);
-      expect(event.name).toBe("John Doe");
+      expect(event.firstName).toBe("John");
+      expect(event.lastName).toBe("Doe");
       expect(event.email).toBe("john.doe@example.com");
     }
   });

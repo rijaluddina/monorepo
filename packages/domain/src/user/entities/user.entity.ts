@@ -7,6 +7,7 @@ import {
   ok,
 } from "@repo/shared";
 import { AggregateRoot } from "../../shared/aggregate-root.ts";
+import type { DomainEvent } from "../../shared/domain-event.ts";
 import { UniqueId } from "../../shared/identifier.ts";
 import { UserActivatedEvent } from "../events/user-activated.event.ts";
 import { UserCreatedEvent } from "../events/user-created.event.ts";
@@ -86,7 +87,13 @@ export class User extends AggregateRoot<UserProps> {
     const user = new User(props, userId);
 
     user.addDomainEvent(
-      new UserCreatedEvent(userId.value, name, email, user.version + 1),
+      new UserCreatedEvent(
+        userId.value,
+        name,
+        email,
+        props.role,
+        user.version + 1,
+      ),
     );
 
     return ok(user);
@@ -98,6 +105,15 @@ export class User extends AggregateRoot<UserProps> {
    */
   public static reconstitute(props: UserProps, id: UniqueId): User {
     return new User(props, id);
+  }
+
+  /**
+   * Reconstitute a User from a stream of domain events.
+   */
+  public static fromEvents(events: DomainEvent[], id: UniqueId): User {
+    const user = new User(null as any, id);
+    user.replay(events);
+    return user;
   }
 
   // ─── Getters ──────────────────────────────────────────────────────────
@@ -208,5 +224,45 @@ export class User extends AggregateRoot<UserProps> {
     this.addDomainEvent(
       new UserRoleChangedEvent(this.id.value, oldRole, role, this.version + 1),
     );
+  }
+
+  // ─── Event Sourcing ───────────────────────────────────────────────────
+
+  protected apply(event: DomainEvent): void {
+    if (event instanceof UserCreatedEvent) {
+      this.props = {
+        name: UserName.create(event.firstName, event.lastName)
+          .value as UserName,
+        email: Email.create(event.email).value as Email,
+        role: event.role,
+        isActive: true,
+        createdAt: event.occurredAt,
+        updatedAt: event.occurredAt,
+      };
+    } else if (event instanceof UserEmailChangedEvent) {
+      this.props = {
+        ...this.props,
+        email: Email.create(event.newEmail).value as Email,
+        updatedAt: event.occurredAt,
+      };
+    } else if (event instanceof UserDeactivatedEvent) {
+      this.props = {
+        ...this.props,
+        isActive: false,
+        updatedAt: event.occurredAt,
+      };
+    } else if (event instanceof UserActivatedEvent) {
+      this.props = {
+        ...this.props,
+        isActive: true,
+        updatedAt: event.occurredAt,
+      };
+    } else if (event instanceof UserRoleChangedEvent) {
+      this.props = {
+        ...this.props,
+        role: event.newRole,
+        updatedAt: event.occurredAt,
+      };
+    }
   }
 }
