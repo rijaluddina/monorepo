@@ -17,6 +17,14 @@ export type { UserDTO } from "./user/dto/user.dto.ts";
 // User — commands
 export { CreateUserCommand } from "./user/commands/create-user.command.ts";
 export { CreateUserCommandHandler } from "./user/commands/create-user.handler.ts";
+export { ActivateUserCommand } from "./user/commands/activate-user.command.ts";
+export { ActivateUserCommandHandler } from "./user/commands/activate-user.handler.ts";
+export { DeactivateUserCommand } from "./user/commands/deactivate-user.command.ts";
+export { DeactivateUserCommandHandler } from "./user/commands/deactivate-user.handler.ts";
+export { ChangeUserEmailCommand } from "./user/commands/change-user-email.command.ts";
+export { ChangeUserEmailCommandHandler } from "./user/commands/change-user-email.handler.ts";
+export { ChangeUserRoleCommand } from "./user/commands/change-user-role.command.ts";
+export { ChangeUserRoleCommandHandler } from "./user/commands/change-user-role.handler.ts";
 
 // User — queries
 export { GetUsersQuery } from "./user/queries/get-users.query.ts";

@@ -1,5 +1,9 @@
 import {
+  ActivateUserCommandHandler,
+  ChangeUserEmailCommandHandler,
+  ChangeUserRoleCommandHandler,
   CreateUserCommandHandler,
+  DeactivateUserCommandHandler,
   GetUserByIdQueryHandler,
   GetUsersQueryHandler,
   type ICommandBus,
@@ -50,6 +54,23 @@ export class AppContainer {
 
     // ── Register handlers on buses ──────────────────────────────────────
     commandBus.register("CreateUserCommand", createUserHandler);
+    commandBus.register(
+      "ActivateUserCommand",
+      new ActivateUserCommandHandler(userRepository, eventStore, eventBus),
+    );
+    commandBus.register(
+      "DeactivateUserCommand",
+      new DeactivateUserCommandHandler(userRepository, eventStore, eventBus),
+    );
+    commandBus.register(
+      "ChangeUserEmailCommand",
+      new ChangeUserEmailCommandHandler(userRepository, eventStore, eventBus),
+    );
+    commandBus.register(
+      "ChangeUserRoleCommand",
+      new ChangeUserRoleCommandHandler(userRepository, eventStore, eventBus),
+    );
+
     queryBus.register("GetUsersQuery", getUsersHandler);
     queryBus.register("GetUserByIdQuery", getUserByIdHandler);
 
