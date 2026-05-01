@@ -20,14 +20,22 @@ export class InMemoryEventBus implements IEventBus {
 
   async publish(event: DomainEvent): Promise<Result<void, AppError>> {
     const handlers = this.handlers.get(event.eventType) ?? [];
-    await Promise.all(handlers.map((h) => h(event)));
+    const results = await Promise.allSettled(handlers.map((h) => h(event)));
+
+    const failures = results.filter((r) => r.status === "rejected");
+    if (failures.length > 0) {
+      console.error(
+        `Event bus: ${failures.length} handlers failed for event ${event.eventType}`,
+      );
+    }
+
     return ok(undefined);
   }
 
   async publishAll(
     events: ReadonlyArray<DomainEvent>,
   ): Promise<Result<void, AppError>> {
-    await Promise.all(events.map((e) => this.publish(e)));
+    await Promise.allSettled(events.map((e) => this.publish(e)));
     return ok(undefined);
   }
 }

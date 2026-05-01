@@ -1,4 +1,3 @@
-import type { UserDTO } from "@repo/application"; //Not used
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 
@@ -7,13 +6,21 @@ export const userApi = {
     const { data, error } = await api.api.users.get({
       query: { page, limit },
     });
-    if (error) throw new Error(error.value?.message || "Request failed");
+    if (error) {
+      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
+      const message = (error.value as any)?.error?.message || "Request failed";
+      throw new Error(message);
+    }
     return data;
   },
 
   getById: async (id: string) => {
     const { data, error } = await api.api.users({ id }).get();
-    if (error) throw new Error(error.value?.message || "User not found");
+    if (error) {
+      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
+      const message = (error.value as any)?.error?.message || "User not found";
+      throw new Error(message);
+    }
     return data;
   },
 
@@ -24,7 +31,11 @@ export const userApi = {
     role?: "admin" | "member" | "viewer";
   }) => {
     const { data, error } = await api.api.users.post(body);
-    if (error) throw new Error(error.value?.message || "Request failed");
+    if (error) {
+      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
+      const message = (error.value as any)?.error?.message || "Request failed";
+      throw new Error(message);
+    }
     return data;
   },
 };

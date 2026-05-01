@@ -2,21 +2,14 @@ import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import {
   CreateUserCommand,
+  DeleteUserCommand,
   GetUserByIdQuery,
   GetUsersQuery,
   type UserDTO,
 } from "@repo/application";
 import { AppContainer } from "@repo/infrastructure";
-import type { Result } from "@repo/shared";
+import type { PaginatedResult } from "@repo/shared";
 import { Elysia, t } from "elysia";
-
-interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
 
 const UserSchema = t.Object(
   {
@@ -47,6 +40,13 @@ const PaginatedUserResponse = t.Object(
   },
   { description: "Paginated user list response" },
 );
+
+const ErrorSchema = t.Object({
+  error: t.Object({
+    code: t.String(),
+    message: t.String(),
+  }),
+});
 
 /**
  * createServer — builds and returns the Elysia app instance.
@@ -95,24 +95,41 @@ export function createServer() {
           // GET /api/users
           .get(
             "/",
-            async ({ query }) => {
+            async ({ query, set }) => {
               const result = await container.queryBus.ask<
                 GetUsersQuery,
-                PaginatedResponse<UserDTO>
+                PaginatedResult<UserDTO>
               >(
                 new GetUsersQuery(
                   Number(query.page ?? 1),
                   Number(query.limit ?? 20),
                 ),
               );
-              return result.unwrap();
+
+              if (result.isErr()) {
+                set.status = result.error.statusCode ?? 500;
+                return {
+                  error: {
+                    code: result.error.code,
+                    message: result.error.message,
+                  },
+                };
+              }
+
+              return result.value;
             },
             {
               query: t.Object({
                 page: t.Optional(t.Numeric({ default: 1 })),
                 limit: t.Optional(t.Numeric({ default: 20 })),
               }),
-              response: PaginatedUserResponse,
+              response: {
+                200: PaginatedUserResponse,
+                400: ErrorSchema,
+                404: ErrorSchema,
+                409: ErrorSchema,
+                500: ErrorSchema,
+              },
               detail: {
                 tags: ["Users"],
                 summary: "List all users (paginated)",
@@ -135,8 +152,19 @@ export function createServer() {
                   body.role,
                 ),
               );
+
+              if (result.isErr()) {
+                set.status = result.error.statusCode ?? 500;
+                return {
+                  error: {
+                    code: result.error.code,
+                    message: result.error.message,
+                  },
+                };
+              }
+
               set.status = 201;
-              return result.unwrap();
+              return result.value;
             },
             {
               body: t.Object({
@@ -153,6 +181,10 @@ export function createServer() {
               }),
               response: {
                 201: UserSchema,
+                400: ErrorSchema,
+                404: ErrorSchema,
+                409: ErrorSchema,
+                500: ErrorSchema,
               },
               detail: { tags: ["Users"], summary: "Create a new user" },
             },
@@ -161,17 +193,69 @@ export function createServer() {
           // GET /api/users/:id
           .get(
             "/:id",
-            async ({ params }) => {
+            async ({ params, set }) => {
               const result = await container.queryBus.ask<
                 GetUserByIdQuery,
                 UserDTO
               >(new GetUserByIdQuery(params.id));
-              return result.unwrap();
+
+              if (result.isErr()) {
+                set.status = result.error.statusCode ?? 500;
+                return {
+                  error: {
+                    code: result.error.code,
+                    message: result.error.message,
+                  },
+                };
+              }
+
+              return result.value;
             },
             {
               params: t.Object({ id: t.String() }),
-              response: UserSchema,
+              response: {
+                200: UserSchema,
+                400: ErrorSchema,
+                404: ErrorSchema,
+                409: ErrorSchema,
+                500: ErrorSchema,
+              },
               detail: { tags: ["Users"], summary: "Get user by ID" },
+            },
+          )
+
+          // DELETE /api/users/:id
+          .delete(
+            "/:id",
+            async ({ params, set }) => {
+              const result = await container.commandBus.dispatch<
+                DeleteUserCommand,
+                void
+              >(new DeleteUserCommand(params.id));
+
+              if (result.isErr()) {
+                set.status = result.error.statusCode ?? 500;
+                return {
+                  error: {
+                    code: result.error.code,
+                    message: result.error.message,
+                  },
+                };
+              }
+
+              set.status = 204;
+              return;
+            },
+            {
+              params: t.Object({ id: t.String() }),
+              response: {
+                204: t.Void(),
+                400: ErrorSchema,
+                404: ErrorSchema,
+                409: ErrorSchema,
+                500: ErrorSchema,
+              },
+              detail: { tags: ["Users"], summary: "Delete a user" },
             },
           ),
       ),

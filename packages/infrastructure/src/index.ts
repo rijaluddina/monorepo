@@ -1,4 +1,5 @@
 export { db, pool } from "./database/drizzle.client.ts";
+export { DrizzleUnitOfWork } from "./database/drizzle-unit-of-work.ts";
 export * from "./database/schema.ts";
 export { DrizzleUserRepository } from "./repositories/drizzle-user.repository.ts";
 export { DrizzleEventStore } from "./event-store/drizzle-event-store.ts";

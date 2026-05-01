@@ -7,6 +7,7 @@ export type { ICommandBus } from "./shared/command-bus.port.ts";
 export type { IQueryBus } from "./shared/query-bus.port.ts";
 export type { IEventBus } from "./shared/event-bus.port.ts";
 export type { IEventStore } from "./shared/event-store.port.ts";
+export type { IUnitOfWork } from "./shared/unit-of-work.port.ts";
 
 // User — ports
 export type { IUserRepository } from "./user/ports/user-repository.port.ts";
@@ -25,6 +26,8 @@ export { ChangeUserEmailCommand } from "./user/commands/change-user-email.comman
 export { ChangeUserEmailCommandHandler } from "./user/commands/change-user-email.handler.ts";
 export { ChangeUserRoleCommand } from "./user/commands/change-user-role.command.ts";
 export { ChangeUserRoleCommandHandler } from "./user/commands/change-user-role.handler.ts";
+export { DeleteUserCommand } from "./user/commands/delete-user.command.ts";
+export { DeleteUserCommandHandler } from "./user/commands/delete-user.handler.ts";
 
 // User — queries
 export { GetUsersQuery } from "./user/queries/get-users.query.ts";
