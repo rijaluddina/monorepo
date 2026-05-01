@@ -171,11 +171,7 @@
     "public.user_role": {
       "name": "user_role",
       "schema": "public",
-      "values": [
-        "ADMIN",
-        "MEMBER",
-        "VIEWER"
-      ]
+      "values": ["ADMIN", "MEMBER", "VIEWER"]
     }
   },
   "schemas": {},
