@@ -1,14 +1,14 @@
 import { type Mock, beforeEach, describe, expect, mock, test } from "bun:test";
 import { ConflictError, ValidationError, err, ok } from "@repo/shared";
-import type { IEventBus } from "../../shared/event-bus.port.ts";
-import type { IUserEventStore } from "../ports/user-event-store.port.ts";
-import type { IUserRepository } from "../ports/user-repository.port.ts";
 import { CreateUserCommand } from "./create-user.command.ts";
 import { CreateUserCommandHandler } from "./create-user.handler.ts";
+import type { IEventBus } from "../../shared/event-bus.port.ts";
+import type { IEventStore } from "../../shared/event-store.port.ts";
+import type { IUserRepository } from "../ports/user-repository.port.ts";
 
 describe("CreateUserCommandHandler", () => {
   let userRepository: IUserRepository;
-  let eventStore: IUserEventStore;
+  let eventStore: IEventStore;
   let eventBus: IEventBus;
   let handler: CreateUserCommandHandler;
 
@@ -25,7 +25,7 @@ describe("CreateUserCommandHandler", () => {
 
     eventStore = {
       append: mock(),
-    } as unknown as IUserEventStore;
+    } as unknown as IEventStore;
 
     eventBus = {
       publish: mock(),

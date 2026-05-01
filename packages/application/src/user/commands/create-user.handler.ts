@@ -3,8 +3,8 @@ import { ConflictError, err, isErr, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
 import type { CommandHandler } from "../../shared/command-handler.ts";
 import type { IEventBus } from "../../shared/event-bus.port.ts";
+import type { IEventStore } from "../../shared/event-store.port.ts";
 import type { UserDTO } from "../dto/user.dto.ts";
-import type { IUserEventStore } from "../ports/user-event-store.port.ts";
 import type { IUserRepository } from "../ports/user-repository.port.ts";
 import { mapUserToDTO } from "../user.mapper.ts";
 import type { CreateUserCommand } from "./create-user.command.ts";
@@ -25,7 +25,7 @@ export class CreateUserCommandHandler
 {
   constructor(
     private readonly userRepository: IUserRepository,
-    private readonly eventStore: IUserEventStore,
+    private readonly eventStore: IEventStore,
     private readonly eventBus: IEventBus,
   ) {}
 

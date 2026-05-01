@@ -66,7 +66,7 @@ POST /api/users
           1. IUserRepository.existsByEmail() — guard
           2. User.create() — aggregate emit events
           3. IUserRepository.save() — write model (Drizzle)
-          4. IUserEventStore.append() — event store (Drizzle)
+          4. IEventStore.append() — event store (Drizzle)
           5. IEventBus.publishAll() — event bus
         → Result<UserDTO>
       → 201 Created

@@ -6,10 +6,10 @@ export type { QueryHandler } from "./shared/query-handler.ts";
 export type { ICommandBus } from "./shared/command-bus.port.ts";
 export type { IQueryBus } from "./shared/query-bus.port.ts";
 export type { IEventBus } from "./shared/event-bus.port.ts";
+export type { IEventStore } from "./shared/event-store.port.ts";
 
 // User — ports
 export type { IUserRepository } from "./user/ports/user-repository.port.ts";
-export type { IUserEventStore } from "./user/ports/user-event-store.port.ts";
 
 // User — DTOs
 export type { UserDTO } from "./user/dto/user.dto.ts";
