@@ -1,4 +1,4 @@
-import { ConflictError, err, isErr, ok } from "@repo/shared";
+import { ConflictError, NotFoundError, err, isErr, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
 import type { CommandHandler } from "../../shared/command-handler.ts";
 import type { IEventBus } from "../../shared/event-bus.port.ts";
@@ -22,13 +22,21 @@ export class ChangeUserEmailCommandHandler
     }
     const user = userResult.value;
 
+    if (!user) {
+      return err(new NotFoundError("User", command.userId));
+    }
+
     if (user.email.value !== command.email) {
-      const existsResult = await this.userRepository.existsByEmail(command.email);
+      const existsResult = await this.userRepository.existsByEmail(
+        command.email,
+      );
       if (isErr(existsResult)) {
         return err(existsResult.error);
       }
       if (existsResult.value) {
-        return err(new ConflictError(`Email "${command.email}" already registered`));
+        return err(
+          new ConflictError(`Email "${command.email}" already registered`),
+        );
       }
     }
 

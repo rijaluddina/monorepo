@@ -1,4 +1,4 @@
-import { err, isErr, ok } from "@repo/shared";
+import { NotFoundError, err, isErr, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
 import type { CommandHandler } from "../../shared/command-handler.ts";
 import type { IEventBus } from "../../shared/event-bus.port.ts";
@@ -21,6 +21,10 @@ export class ChangeUserRoleCommandHandler
       return err(userResult.error);
     }
     const user = userResult.value;
+
+    if (!user) {
+      return err(new NotFoundError("User", command.userId));
+    }
 
     user.changeRole(command.role);
 

@@ -9,11 +9,26 @@ import {
 import { AggregateRoot } from "../../shared/aggregate-root.ts";
 import type { DomainEvent } from "../../shared/domain-event.ts";
 import { UniqueId } from "../../shared/identifier.ts";
-import { UserActivatedEvent } from "../events/user-activated.event.ts";
-import { UserCreatedEvent } from "../events/user-created.event.ts";
-import { UserDeactivatedEvent } from "../events/user-deactivated.event.ts";
-import { UserEmailChangedEvent } from "../events/user-email-changed.event.ts";
-import { UserRoleChangedEvent } from "../events/user-role-changed.event.ts";
+import {
+  USER_ACTIVATED,
+  UserActivatedEvent,
+} from "../events/user-activated.event.ts";
+import {
+  USER_CREATED,
+  UserCreatedEvent,
+} from "../events/user-created.event.ts";
+import {
+  USER_DEACTIVATED,
+  UserDeactivatedEvent,
+} from "../events/user-deactivated.event.ts";
+import {
+  USER_EMAIL_CHANGED,
+  UserEmailChangedEvent,
+} from "../events/user-email-changed.event.ts";
+import {
+  USER_ROLE_CHANGED,
+  UserRoleChangedEvent,
+} from "../events/user-role-changed.event.ts";
 import { Email } from "../value-objects/email.vo.ts";
 import { UserName } from "../value-objects/user-name.vo.ts";
 
@@ -111,7 +126,7 @@ export class User extends AggregateRoot<UserProps> {
    * Reconstitute a User from a stream of domain events.
    */
   public static fromEvents(events: DomainEvent[], id: UniqueId): User {
-    const user = new User(null as any, id);
+    const user = new User(null as unknown as UserProps, id);
     user.replay(events);
     return user;
   }
@@ -229,40 +244,48 @@ export class User extends AggregateRoot<UserProps> {
   // ─── Event Sourcing ───────────────────────────────────────────────────
 
   protected apply(event: DomainEvent): void {
-    if (event instanceof UserCreatedEvent) {
-      this.props = {
-        name: UserName.create(event.firstName, event.lastName)
-          .value as UserName,
-        email: Email.create(event.email).value as Email,
-        role: event.role,
-        isActive: true,
-        createdAt: event.occurredAt,
-        updatedAt: event.occurredAt,
-      };
-    } else if (event instanceof UserEmailChangedEvent) {
-      this.props = {
-        ...this.props,
-        email: Email.create(event.newEmail).value as Email,
-        updatedAt: event.occurredAt,
-      };
-    } else if (event instanceof UserDeactivatedEvent) {
-      this.props = {
-        ...this.props,
-        isActive: false,
-        updatedAt: event.occurredAt,
-      };
-    } else if (event instanceof UserActivatedEvent) {
-      this.props = {
-        ...this.props,
-        isActive: true,
-        updatedAt: event.occurredAt,
-      };
-    } else if (event instanceof UserRoleChangedEvent) {
-      this.props = {
-        ...this.props,
-        role: event.newRole,
-        updatedAt: event.occurredAt,
-      };
+    // biome-ignore lint/suspicious/noExplicitAny: needed for event sourcing reconstitution from serialized events
+    const payload = event as any;
+
+    switch (event.eventType) {
+      case USER_CREATED:
+        this.props = {
+          name: UserName.create(payload.firstName, payload.lastName).unwrap(),
+          email: Email.create(payload.email).unwrap(),
+          role: payload.role,
+          isActive: true,
+          createdAt: event.occurredAt,
+          updatedAt: event.occurredAt,
+        };
+        break;
+      case USER_EMAIL_CHANGED:
+        this.props = {
+          ...this.props,
+          email: Email.create(payload.newEmail).unwrap(),
+          updatedAt: event.occurredAt,
+        };
+        break;
+      case USER_DEACTIVATED:
+        this.props = {
+          ...this.props,
+          isActive: false,
+          updatedAt: event.occurredAt,
+        };
+        break;
+      case USER_ACTIVATED:
+        this.props = {
+          ...this.props,
+          isActive: true,
+          updatedAt: event.occurredAt,
+        };
+        break;
+      case USER_ROLE_CHANGED:
+        this.props = {
+          ...this.props,
+          role: payload.newRole,
+          updatedAt: event.occurredAt,
+        };
+        break;
     }
   }
 }

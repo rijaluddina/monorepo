@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { UniqueId } from "../../shared/identifier.ts";
-import { User } from "./user.entity.ts";
 import { UserCreatedEvent } from "../events/user-created.event.ts";
 import { UserEmailChangedEvent } from "../events/user-email-changed.event.ts";
-import { UserName } from "../value-objects/user-name.vo.ts";
 import { Email } from "../value-objects/email.vo.ts";
+import { UserName } from "../value-objects/user-name.vo.ts";
+import { User } from "./user.entity.ts";
 
 describe("User Aggregate Reconstitution", () => {
   it("should reconstitute user from events", () => {
@@ -15,7 +15,12 @@ describe("User Aggregate Reconstitution", () => {
 
     const events = [
       new UserCreatedEvent(userId.value, name, email, role, 1),
-      new UserEmailChangedEvent(userId.value, "john@example.com", "john.doe@example.com", 2),
+      new UserEmailChangedEvent(
+        userId.value,
+        "john@example.com",
+        "john.doe@example.com",
+        2,
+      ),
     ];
 
     const user = User.fromEvents(events, userId);

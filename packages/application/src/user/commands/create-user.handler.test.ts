@@ -1,10 +1,10 @@
 import { type Mock, beforeEach, describe, expect, mock, test } from "bun:test";
 import { ConflictError, ValidationError, err, ok } from "@repo/shared";
-import { CreateUserCommand } from "./create-user.command.ts";
-import { CreateUserCommandHandler } from "./create-user.handler.ts";
 import type { IEventBus } from "../../shared/event-bus.port.ts";
 import type { IEventStore } from "../../shared/event-store.port.ts";
 import type { IUserRepository } from "../ports/user-repository.port.ts";
+import { CreateUserCommand } from "./create-user.command.ts";
+import { CreateUserCommandHandler } from "./create-user.handler.ts";
 
 describe("CreateUserCommandHandler", () => {
   let userRepository: IUserRepository;
