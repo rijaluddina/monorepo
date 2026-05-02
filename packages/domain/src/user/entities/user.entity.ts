@@ -22,6 +22,10 @@ import {
   UserDeactivatedEvent,
 } from "../events/user-deactivated.event.ts";
 import {
+  USER_DELETED,
+  UserDeletedEvent,
+} from "../events/user-deleted.event.ts";
+import {
   USER_EMAIL_CHANGED,
   UserEmailChangedEvent,
 } from "../events/user-email-changed.event.ts";
@@ -232,6 +236,10 @@ export class User extends AggregateRoot<UserProps> {
     this.props.updatedAt = new Date();
   }
 
+  public delete(): void {
+    this.addDomainEvent(new UserDeletedEvent(this.id.value, this.version + 1));
+  }
+
   // ─── Event Sourcing ───────────────────────────────────────────────────
 
   protected apply(event: DomainEvent): Result<void, ValidationError> {
@@ -291,6 +299,8 @@ export class User extends AggregateRoot<UserProps> {
           role: payload.newRole,
           updatedAt: event.occurredAt,
         };
+        break;
+      case USER_DELETED:
         break;
       default:
         return err(

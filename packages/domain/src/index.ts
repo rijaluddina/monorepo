@@ -39,3 +39,7 @@ export {
   UserRoleChangedEvent,
   USER_ROLE_CHANGED,
 } from "./user/events/user-role-changed.event.ts";
+export {
+  UserDeletedEvent,
+  USER_DELETED,
+} from "./user/events/user-deleted.event.ts";
