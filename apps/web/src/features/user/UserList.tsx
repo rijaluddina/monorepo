@@ -145,7 +145,7 @@ function EditUserModal({ user, onClose }: EditUserModalProps) {
         await changeEmail.mutateAsync({ id: user.id, email });
       }
       if (role !== user.role) {
-        await changeRole.mutateAsync({ id: user.id, role: role as any });
+        await changeRole.mutateAsync({ id: user.id, role });
       }
       onClose();
     } catch (err) {
@@ -165,9 +165,9 @@ function EditUserModal({ user, onClose }: EditUserModalProps) {
 
         <form onSubmit={handleSubmit} className="form-inner">
           <div className="form-group">
-            <label htmlFor="edit-email">Email</label>
+            <label htmlFor={`edit-email-${user.id}`}>Email</label>
             <input
-              id="edit-email"
+              id={`edit-email-${user.id}`}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -175,11 +175,11 @@ function EditUserModal({ user, onClose }: EditUserModalProps) {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="edit-role">Role</label>
+            <label htmlFor={`edit-role-${user.id}`}>Role</label>
             <select
-              id="edit-role"
+              id={`edit-role-${user.id}`}
               value={role}
-              onChange={(e) => setRole(e.target.value as any)}
+              onChange={(e) => setRole(e.target.value as UserDTO["role"])}
             >
               <option value="member">Member</option>
               <option value="admin">Admin</option>
@@ -240,59 +240,57 @@ function UserRow({ user }: { user: UserDTO }) {
     `${user.firstName[0] ?? ""}${user.lastName[0] ?? ""}`.toUpperCase();
 
   return (
-    <>
-      <tr>
-        <td>
-          <div className="user-info">
-            <div className="user-avatar">{initials}</div>
-            <div>
-              <div className="user-name">{user.fullName}</div>
-              <div className="user-email">{user.email}</div>
-            </div>
+    <tr>
+      <td>
+        <div className="user-info">
+          <div className="user-avatar">{initials}</div>
+          <div>
+            <div className="user-name">{user.fullName}</div>
+            <div className="user-email">{user.email}</div>
           </div>
-        </td>
-        <td>
-          <span className={`badge badge-${user.role}`}>{user.role}</span>
-        </td>
-        <td>
-          <span
-            className={`badge ${user.isActive ? "badge-active" : "badge-inactive"}`}
+        </div>
+      </td>
+      <td>
+        <span className={`badge badge-${user.role}`}>{user.role}</span>
+      </td>
+      <td>
+        <span
+          className={`badge ${user.isActive ? "badge-active" : "badge-inactive"}`}
+        >
+          {user.isActive ? "● Active" : "○ Inactive"}
+        </span>
+      </td>
+      <td style={{ color: "var(--text-secondary)", fontSize: "13px" }}>
+        <div className="row-actions">
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={() => setIsEditOpen(true)}
+            type="button"
           >
-            {user.isActive ? "● Active" : "○ Inactive"}
-          </span>
-        </td>
-        <td style={{ color: "var(--text-secondary)", fontSize: "13px" }}>
-          <div className="row-actions">
-            <button
-              className="btn btn-sm btn-ghost"
-              onClick={() => setIsEditOpen(true)}
-              type="button"
-            >
-              Edit
-            </button>
-            <button
-              className="btn btn-sm btn-ghost"
-              onClick={handleToggleStatus}
-              disabled={activate.isPending || deactivate.isPending}
-              type="button"
-            >
-              {user.isActive ? "Deactivate" : "Activate"}
-            </button>
-            <button
-              className="btn btn-sm btn-danger"
-              onClick={handleDelete}
-              disabled={deleteUser.isPending}
-              type="button"
-            >
-              Delete
-            </button>
-          </div>
-        </td>
-      </tr>
-      {isEditOpen && (
-        <EditUserModal user={user} onClose={() => setIsEditOpen(false)} />
-      )}
-    </>
+            Edit
+          </button>
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={handleToggleStatus}
+            disabled={activate.isPending || deactivate.isPending}
+            type="button"
+          >
+            {user.isActive ? "Deactivate" : "Activate"}
+          </button>
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={handleDelete}
+            disabled={deleteUser.isPending}
+            type="button"
+          >
+            Delete
+          </button>
+        </div>
+        {isEditOpen && (
+          <EditUserModal user={user} onClose={() => setIsEditOpen(false)} />
+        )}
+      </td>
+    </tr>
   );
 }
 

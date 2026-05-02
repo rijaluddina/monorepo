@@ -43,7 +43,8 @@ export const userApi = {
     const { error } = await api.api.users({ id }).activate.patch();
     if (error) {
       // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
-      const message = (error.value as any)?.error?.message || "Activation failed";
+      const message =
+        (error.value as any)?.error?.message || "Activation failed";
       throw new Error(message);
     }
   },
@@ -52,7 +53,8 @@ export const userApi = {
     const { error } = await api.api.users({ id }).deactivate.patch();
     if (error) {
       // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
-      const message = (error.value as any)?.error?.message || "Deactivation failed";
+      const message =
+        (error.value as any)?.error?.message || "Deactivation failed";
       throw new Error(message);
     }
   },
@@ -61,7 +63,8 @@ export const userApi = {
     const { error } = await api.api.users({ id }).email.patch({ email });
     if (error) {
       // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
-      const message = (error.value as any)?.error?.message || "Email update failed";
+      const message =
+        (error.value as any)?.error?.message || "Email update failed";
       throw new Error(message);
     }
   },
@@ -70,7 +73,8 @@ export const userApi = {
     const { error } = await api.api.users({ id }).role.patch({ role });
     if (error) {
       // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
-      const message = (error.value as any)?.error?.message || "Role update failed";
+      const message =
+        (error.value as any)?.error?.message || "Role update failed";
       throw new Error(message);
     }
   },
@@ -146,7 +150,10 @@ export const useChangeUserEmail = () => {
 export const useChangeUserRole = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, role }: { id: string; role: "admin" | "member" | "viewer" }) =>
+    mutationFn: ({
+      id,
+      role,
+    }: { id: string; role: "admin" | "member" | "viewer" }) =>
       userApi.changeRole(id, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: userKeys.lists() });
