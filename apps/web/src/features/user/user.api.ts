@@ -42,8 +42,8 @@ export const userApi = {
   activate: async (id: string) => {
     const { error } = await api.api.users({ id }).activate.patch();
     if (error) {
-      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
       const message =
+        // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
         (error.value as any)?.error?.message || "Activation failed";
       throw new Error(message);
     }
@@ -52,8 +52,8 @@ export const userApi = {
   deactivate: async (id: string) => {
     const { error } = await api.api.users({ id }).deactivate.patch();
     if (error) {
-      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
       const message =
+        // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
         (error.value as any)?.error?.message || "Deactivation failed";
       throw new Error(message);
     }
@@ -62,8 +62,8 @@ export const userApi = {
   changeEmail: async (id: string, email: string) => {
     const { error } = await api.api.users({ id }).email.patch({ email });
     if (error) {
-      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
       const message =
+        // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
         (error.value as any)?.error?.message || "Email update failed";
       throw new Error(message);
     }
@@ -72,8 +72,8 @@ export const userApi = {
   changeRole: async (id: string, role: "admin" | "member" | "viewer") => {
     const { error } = await api.api.users({ id }).role.patch({ role });
     if (error) {
-      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
       const message =
+        // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
         (error.value as any)?.error?.message || "Role update failed";
       throw new Error(message);
     }

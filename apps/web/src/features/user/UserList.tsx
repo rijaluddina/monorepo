@@ -104,9 +104,9 @@ function CreateUserForm() {
               value={form.role}
               onChange={handleChange}
             >
-              <option value="member">Member</option>
-              <option value="admin">Admin</option>
-              <option value="viewer">Viewer</option>
+              <option value="member">Member (Editor)</option>
+              <option value="admin">Admin (Full Access)</option>
+              <option value="viewer">Viewer (Read-only)</option>
             </select>
           </div>
         </div>
@@ -181,9 +181,9 @@ function EditUserModal({ user, onClose }: EditUserModalProps) {
               value={role}
               onChange={(e) => setRole(e.target.value as UserDTO["role"])}
             >
-              <option value="member">Member</option>
-              <option value="admin">Admin</option>
-              <option value="viewer">Viewer</option>
+              <option value="member">Member (Editor)</option>
+              <option value="admin">Admin (Full Access)</option>
+              <option value="viewer">Viewer (Read-only)</option>
             </select>
           </div>
 
@@ -214,25 +214,81 @@ function EditUserModal({ user, onClose }: EditUserModalProps) {
   );
 }
 
+// ─── Delete User Modal ─────────────────────────────────────────────────────
+
+interface DeleteUserModalProps {
+  user: UserDTO;
+  onClose: () => void;
+}
+
+function DeleteUserModal({ user, onClose }: DeleteUserModalProps) {
+  const deleteUser = useDeleteUser();
+
+  async function handleDelete() {
+    try {
+      await deleteUser.mutateAsync(user.id);
+      onClose();
+    } catch (err) {
+      // Handled by mutation hook
+    }
+  }
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content card">
+        <div className="card-header">
+          <span className="card-title">🗑️ Delete User</span>
+          <button className="btn btn-ghost" onClick={onClose} type="button">
+            ✕
+          </button>
+        </div>
+
+        <div className="form-inner">
+          <p style={{ marginBottom: "24px", color: "var(--text-secondary)" }}>
+            Are you sure you want to delete <strong>{user.fullName}</strong>?
+            This action cannot be undone.
+          </p>
+
+          {deleteUser.isError && (
+            <div className="alert alert-error">
+              {deleteUser.error instanceof Error
+                ? deleteUser.error.message
+                : "Deletion failed"}
+            </div>
+          )}
+
+          <div className="form-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleDelete}
+              disabled={deleteUser.isPending}
+            >
+              {deleteUser.isPending ? "Deleting..." : "Confirm Delete"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── User Table Row ────────────────────────────────────────────────────────
 
 function UserRow({ user }: { user: UserDTO }) {
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const activate = useActivateUser();
   const deactivate = useDeactivateUser();
-  const deleteUser = useDeleteUser();
 
   const handleToggleStatus = async () => {
     if (user.isActive) {
       await deactivate.mutateAsync(user.id);
     } else {
       await activate.mutateAsync(user.id);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (window.confirm(`Are you sure you want to delete ${user.fullName}?`)) {
-      await deleteUser.mutateAsync(user.id);
     }
   };
 
@@ -278,9 +334,8 @@ function UserRow({ user }: { user: UserDTO }) {
             {user.isActive ? "Deactivate" : "Activate"}
           </button>
           <button
-            className="btn btn-sm btn-danger"
-            onClick={handleDelete}
-            disabled={deleteUser.isPending}
+            className="btn btn-sm btn-primary"
+            onClick={() => setIsDeleteOpen(true)}
             type="button"
           >
             Delete
@@ -288,6 +343,9 @@ function UserRow({ user }: { user: UserDTO }) {
         </div>
         {isEditOpen && (
           <EditUserModal user={user} onClose={() => setIsEditOpen(false)} />
+        )}
+        {isDeleteOpen && (
+          <DeleteUserModal user={user} onClose={() => setIsDeleteOpen(false)} />
         )}
       </td>
     </tr>
