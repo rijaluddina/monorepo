@@ -1,7 +1,7 @@
 import type { IEventStore, IUserRepository } from "@repo/application";
 import { Email, UniqueId, User, UserName } from "@repo/domain";
 import {
-  type AppError,
+  AppError,
   type Optional,
   type PersistenceContext,
   type Result,
@@ -11,6 +11,7 @@ import {
 } from "@repo/shared";
 import { count, eq } from "drizzle-orm";
 import type { DrizzleDB } from "../database/drizzle.client.ts";
+import { fromPersistenceContext } from "../database/persistence-context.ts";
 import { users } from "../database/schema.ts";
 
 /**
@@ -23,7 +24,15 @@ export class DrizzleUserRepository implements IUserRepository {
   ) {}
 
   private getDb(ctx?: PersistenceContext): DrizzleDB {
-    return ctx ? (ctx as unknown as DrizzleDB) : this.db;
+    return ctx ? fromPersistenceContext(ctx) : this.db;
+  }
+
+  private toInfrastructureError(error: unknown): AppError {
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "Database operation failed";
+    return new AppError(message, "INFRASTRUCTURE_ERROR");
   }
 
   async findById(
@@ -31,15 +40,19 @@ export class DrizzleUserRepository implements IUserRepository {
     ctx?: PersistenceContext,
   ): Promise<Result<Optional<User>, AppError>> {
     const db = this.getDb(ctx);
-    const record = await db.query.users.findFirst({
-      where: eq(users.id, id),
-    });
-    if (!record) return ok(undefined);
+    try {
+      const record = await db.query.users.findFirst({
+        where: eq(users.id, id),
+      });
+      if (!record) return ok(undefined);
 
-    const userResult = this.toDomain(record);
-    if (userResult.isErr()) return err(userResult.error);
+      const userResult = this.toDomain(record);
+      if (userResult.isErr()) return err(userResult.error);
 
-    return ok(userResult.value);
+      return ok(userResult.value);
+    } catch (error) {
+      return err(this.toInfrastructureError(error));
+    }
   }
 
   async findByEmail(
@@ -47,15 +60,19 @@ export class DrizzleUserRepository implements IUserRepository {
     ctx?: PersistenceContext,
   ): Promise<Result<Optional<User>, AppError>> {
     const db = this.getDb(ctx);
-    const record = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    });
-    if (!record) return ok(undefined);
+    try {
+      const record = await db.query.users.findFirst({
+        where: eq(users.email, email),
+      });
+      if (!record) return ok(undefined);
 
-    const userResult = this.toDomain(record);
-    if (userResult.isErr()) return err(userResult.error);
+      const userResult = this.toDomain(record);
+      if (userResult.isErr()) return err(userResult.error);
 
-    return ok(userResult.value);
+      return ok(userResult.value);
+    } catch (error) {
+      return err(this.toInfrastructureError(error));
+    }
   }
 
   async findAll(
@@ -70,28 +87,32 @@ export class DrizzleUserRepository implements IUserRepository {
     const limit = params?.limit ?? 20;
     const offset = (page - 1) * limit;
 
-    const [records, totalResult] = await Promise.all([
-      db.query.users.findMany({
-        limit,
-        offset,
-        orderBy: (users, { desc }) => [desc(users.createdAt)],
-      }),
-      db.select({ value: count() }).from(users),
-    ]);
+    try {
+      const [records, totalResult] = await Promise.all([
+        db.query.users.findMany({
+          limit,
+          offset,
+          orderBy: (users, { desc }) => [desc(users.createdAt)],
+        }),
+        db.select({ value: count() }).from(users),
+      ]);
 
-    const total = Number(totalResult[0]?.value ?? 0);
+      const total = Number(totalResult[0]?.value ?? 0);
 
-    const usersList: User[] = [];
-    for (const r of records) {
-      const userResult = this.toDomain(r);
-      if (userResult.isErr()) return err(userResult.error);
-      usersList.push(userResult.value);
+      const usersList: User[] = [];
+      for (const r of records) {
+        const userResult = this.toDomain(r);
+        if (userResult.isErr()) return err(userResult.error);
+        usersList.push(userResult.value);
+      }
+
+      return ok({
+        users: usersList,
+        total,
+      });
+    } catch (error) {
+      return err(this.toInfrastructureError(error));
     }
-
-    return ok({
-      users: usersList,
-      total,
-    });
   }
 
   async save(
@@ -99,17 +120,21 @@ export class DrizzleUserRepository implements IUserRepository {
     ctx?: PersistenceContext,
   ): Promise<Result<void, AppError>> {
     const db = this.getDb(ctx);
-    await db.insert(users).values({
-      id: user.id.value,
-      firstName: user.name.firstName,
-      lastName: user.name.lastName,
-      email: user.email.value,
-      role: user.role.toUpperCase() as "ADMIN" | "MEMBER" | "VIEWER",
-      isActive: user.isActive,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    });
-    return ok();
+    try {
+      await db.insert(users).values({
+        id: user.id.value,
+        firstName: user.name.firstName,
+        lastName: user.name.lastName,
+        email: user.email.value,
+        role: user.role.toUpperCase() as "ADMIN" | "MEMBER" | "VIEWER",
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      });
+      return ok();
+    } catch (error) {
+      return err(this.toInfrastructureError(error));
+    }
   }
 
   async update(
@@ -117,18 +142,22 @@ export class DrizzleUserRepository implements IUserRepository {
     ctx?: PersistenceContext,
   ): Promise<Result<void, AppError>> {
     const db = this.getDb(ctx);
-    await db
-      .update(users)
-      .set({
-        firstName: user.name.firstName,
-        lastName: user.name.lastName,
-        email: user.email.value,
-        role: user.role.toUpperCase() as "ADMIN" | "MEMBER" | "VIEWER",
-        isActive: user.isActive,
-        updatedAt: user.updatedAt,
-      })
-      .where(eq(users.id, user.id.value));
-    return ok();
+    try {
+      await db
+        .update(users)
+        .set({
+          firstName: user.name.firstName,
+          lastName: user.name.lastName,
+          email: user.email.value,
+          role: user.role.toUpperCase() as "ADMIN" | "MEMBER" | "VIEWER",
+          isActive: user.isActive,
+          updatedAt: user.updatedAt,
+        })
+        .where(eq(users.id, user.id.value));
+      return ok();
+    } catch (error) {
+      return err(this.toInfrastructureError(error));
+    }
   }
 
   async delete(
@@ -136,8 +165,12 @@ export class DrizzleUserRepository implements IUserRepository {
     ctx?: PersistenceContext,
   ): Promise<Result<void, AppError>> {
     const db = this.getDb(ctx);
-    await db.delete(users).where(eq(users.id, id));
-    return ok();
+    try {
+      await db.delete(users).where(eq(users.id, id));
+      return ok();
+    } catch (error) {
+      return err(this.toInfrastructureError(error));
+    }
   }
 
   async existsByEmail(
@@ -145,11 +178,15 @@ export class DrizzleUserRepository implements IUserRepository {
     ctx?: PersistenceContext,
   ): Promise<Result<boolean, AppError>> {
     const db = this.getDb(ctx);
-    const record = await db.query.users.findFirst({
-      where: eq(users.email, email),
-      columns: { id: true },
-    });
-    return ok(record !== undefined);
+    try {
+      const record = await db.query.users.findFirst({
+        where: eq(users.email, email),
+        columns: { id: true },
+      });
+      return ok(record !== undefined);
+    } catch (error) {
+      return err(this.toInfrastructureError(error));
+    }
   }
 
   private toDomain(record: typeof users.$inferSelect): Result<User, AppError> {

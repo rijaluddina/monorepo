@@ -31,8 +31,12 @@ export type Primitive =
 /** A plain JS object (record) */
 export type PlainObject = Record<string, unknown>;
 
+declare const persistenceContextBrand: unique symbol;
+
 /** Opaque handle for persistence transactions/sessions */
-export type PersistenceContext = Record<string, unknown>;
+export type PersistenceContext = {
+  readonly [persistenceContextBrand]: "PersistenceContext";
+};
 
 /** Pagination params */
 export interface PaginationParams {

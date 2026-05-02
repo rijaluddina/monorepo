@@ -98,7 +98,12 @@ export class AppContainer {
     );
     commandBus.register(
       "DeleteUserCommand",
-      new DeleteUserCommandHandler(userRepository, unitOfWork),
+      new DeleteUserCommandHandler(
+        userRepository,
+        eventStore,
+        eventBus,
+        unitOfWork,
+      ),
     );
 
     queryBus.register("GetUsersQuery", getUsersHandler);

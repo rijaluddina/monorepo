@@ -31,6 +31,7 @@ export const users = pgTable(
     updatedAt: timestamp("updated_at", { precision: 3, mode: "date" })
       .notNull()
       .defaultNow()
+      // Drizzle ORM-side hook only; direct SQL clients bypass this.
       .$onUpdate(() => new Date()),
   },
   (table) => [uniqueIndex("users_email_key").on(table.email)],
@@ -54,5 +55,9 @@ export const eventStore = pgTable(
   (table) => [
     index("event_store_aggregate_id_idx").on(table.aggregateId),
     index("event_store_event_type_idx").on(table.eventType),
+    uniqueIndex("event_store_aggregate_version_idx").on(
+      table.aggregateId,
+      table.version,
+    ),
   ],
 );
