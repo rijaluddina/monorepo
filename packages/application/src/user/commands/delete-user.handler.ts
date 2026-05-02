@@ -1,8 +1,6 @@
 import { NotFoundError, err, isErr, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
 import type { CommandHandler } from "../../shared/command-handler.ts";
-import type { IEventBus } from "../../shared/event-bus.port.ts";
-import type { IEventStore } from "../../shared/event-store.port.ts";
 import type { IUnitOfWork } from "../../shared/unit-of-work.port.ts";
 import type { IUserRepository } from "../ports/user-repository.port.ts";
 import type { DeleteUserCommand } from "./delete-user.command.ts";
@@ -12,8 +10,6 @@ export class DeleteUserCommandHandler
 {
   constructor(
     private readonly userRepository: IUserRepository,
-    private readonly eventStore: IEventStore,
-    private readonly eventBus: IEventBus,
     private readonly unitOfWork: IUnitOfWork,
   ) {}
 

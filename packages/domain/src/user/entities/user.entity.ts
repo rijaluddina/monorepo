@@ -1,6 +1,6 @@
 import {
   type Result,
-  type ValidationError,
+  ValidationError,
   combine,
   err,
   isErr,
@@ -129,6 +129,15 @@ export class User extends AggregateRoot<UserProps> {
     events: DomainEvent[],
     id: UniqueId,
   ): Result<User, ValidationError> {
+    if (events.length === 0) {
+      return err(new ValidationError("No events provided for reconstitution"));
+    }
+
+    const firstEvent = events[0];
+    if (!firstEvent || firstEvent.eventType !== USER_CREATED) {
+      return err(new ValidationError("First event must be USER_CREATED"));
+    }
+
     const user = new User(null as unknown as UserProps, id);
     const result = user.replay(events);
     if (isErr(result)) return err(result.error);
@@ -161,88 +170,66 @@ export class User extends AggregateRoot<UserProps> {
     return this.props.updatedAt;
   }
 
-  // ─── Commands (state mutations) ───────────────────────────────────────
+  // ─── Mutations ────────────────────────────────────────────────────────
 
   public changeEmail(newEmail: string): Result<void, ValidationError> {
     const emailResult = Email.create(newEmail);
-    if (isErr(emailResult)) {
-      return err(emailResult.error);
-    }
+    if (isErr(emailResult)) return err(emailResult.error);
 
     const email = emailResult.value;
-    const oldEmail = this.props.email.value;
-
-    // Idempotency check
-    if (email.value === oldEmail) {
-      return ok();
-    }
-
-    this.props = {
-      ...this.props,
-      email,
-      updatedAt: new Date(),
-    };
+    if (this.props.email.equals(email)) return ok();
 
     this.addDomainEvent(
       new UserEmailChangedEvent(
-        this._id.value,
-        oldEmail,
+        this.id.value,
+        this.props.email.value,
         email.value,
         this.version + 1,
       ),
     );
 
+    this.props.email = email;
+    this.props.updatedAt = new Date();
+
     return ok();
   }
 
   public deactivate(): void {
-    if (!this.props.isActive) {
-      return;
-    }
-
-    this.props = {
-      ...this.props,
-      isActive: false,
-      updatedAt: new Date(),
-    };
+    if (!this.props.isActive) return;
 
     this.addDomainEvent(
       new UserDeactivatedEvent(this.id.value, this.version + 1),
     );
+
+    this.props.isActive = false;
+    this.props.updatedAt = new Date();
   }
 
   public activate(): void {
-    if (this.props.isActive) {
-      return;
-    }
-
-    this.props = {
-      ...this.props,
-      isActive: true,
-      updatedAt: new Date(),
-    };
+    if (this.props.isActive) return;
 
     this.addDomainEvent(
       new UserActivatedEvent(this.id.value, this.version + 1),
     );
+
+    this.props.isActive = true;
+    this.props.updatedAt = new Date();
   }
 
-  public changeRole(role: UserRole): void {
-    if (this.props.role === role) {
-      return;
-    }
-
-    const oldRole = this.props.role;
-
-    this.props = {
-      ...this.props,
-      role,
-      updatedAt: new Date(),
-    };
+  public changeRole(newRole: UserRole): void {
+    if (this.props.role === newRole) return;
 
     this.addDomainEvent(
-      new UserRoleChangedEvent(this.id.value, oldRole, role, this.version + 1),
+      new UserRoleChangedEvent(
+        this.id.value,
+        this.props.role,
+        newRole,
+        this.version + 1,
+      ),
     );
+
+    this.props.role = newRole;
+    this.props.updatedAt = new Date();
   }
 
   // ─── Event Sourcing ───────────────────────────────────────────────────
@@ -305,6 +292,10 @@ export class User extends AggregateRoot<UserProps> {
           updatedAt: event.occurredAt,
         };
         break;
+      default:
+        return err(
+          new ValidationError(`Unknown event type: ${event.eventType}`),
+        );
     }
     return ok(undefined);
   }

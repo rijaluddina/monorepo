@@ -27,3 +27,15 @@ export {
   UserEmailChangedEvent,
   USER_EMAIL_CHANGED,
 } from "./user/events/user-email-changed.event.ts";
+export {
+  UserActivatedEvent,
+  USER_ACTIVATED,
+} from "./user/events/user-activated.event.ts";
+export {
+  UserDeactivatedEvent,
+  USER_DEACTIVATED,
+} from "./user/events/user-deactivated.event.ts";
+export {
+  UserRoleChangedEvent,
+  USER_ROLE_CHANGED,
+} from "./user/events/user-role-changed.event.ts";

@@ -31,7 +31,7 @@ export class ChangeUserRoleCommandHandler
     user.changeRole(command.role);
 
     const transactionResult = await this.unitOfWork.run(async (ctx) => {
-      const saveResult = await this.userRepository.save(user, ctx);
+      const saveResult = await this.userRepository.update(user, ctx);
       if (isErr(saveResult)) return err(saveResult.error);
 
       const appendResult = await this.eventStore.append(
