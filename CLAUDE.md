@@ -19,8 +19,11 @@ Repo code work guidance.
 - `cd apps/api && bun run dev` — ElysiaJS backend
 - `cd apps/web && bun run dev` — Vite + React frontend
 
-### Single test
-- `cd <package> && bun test <file>` — Bun runner
+### Test Runners
+Mixed runners across packages:
+- `packages/*`, `apps/api`: **Bun** runner (`bun test`).
+- `apps/web`: **Vitest** runner (`vitest`).
+- **Full Test Suite**: Always use `bun run test` (Turbo) from root to trigger correct runner per package. Avoid running naked `bun test` from root as it fails on Web tests (no DOM).
 
 ## Architecture
 

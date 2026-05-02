@@ -52,6 +52,17 @@ const ErrorSchema = t.Object({
   }),
 });
 
+const ValidationErrorSchema = t.Object({
+  type: t.Optional(t.String()),
+  on: t.Optional(t.String()),
+  summary: t.Optional(t.String()),
+  property: t.Optional(t.String()),
+  message: t.String(),
+  expected: t.Optional(t.Unknown()),
+  found: t.Optional(t.Unknown()),
+  errors: t.Optional(t.Array(t.Unknown())),
+});
+
 /**
  * createServer — builds and returns the Elysia app instance.
  *
@@ -183,7 +194,7 @@ export function createServer() {
                 400: ErrorSchema,
                 404: ErrorSchema,
                 409: ErrorSchema,
-                422: t.Any(), // Validation error
+                422: ValidationErrorSchema,
                 500: ErrorSchema,
               },
               detail: { tags: ["Users"], summary: "Create a new user" },

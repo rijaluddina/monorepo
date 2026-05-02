@@ -4,6 +4,41 @@ import { createServer } from "./server";
 describe("API Integration Tests", () => {
   const app = createServer();
 
+  async function createUser(
+    overrides: Partial<{
+      firstName: string;
+      lastName: string;
+      email: string;
+      role: "admin" | "member" | "viewer";
+    }> = {},
+  ) {
+    const userData = {
+      firstName: "Integration",
+      lastName: "Test",
+      email: `test-${Date.now()}-${crypto.randomUUID()}@example.com`,
+      role: "member" as const,
+      ...overrides,
+    };
+
+    const response = await app.handle(
+      new Request("http://localhost/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    return (await response.json()) as {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      role: string;
+      isActive: boolean;
+    };
+  }
+
   describe("GET /health", () => {
     it("should return 200 and status ok", async () => {
       const response = await app.handle(new Request("http://localhost/health"));
@@ -18,28 +53,12 @@ describe("API Integration Tests", () => {
       const userData = {
         firstName: "Integration",
         lastName: "Test",
-        email: `test-${Date.now()}@example.com`,
-        role: "member",
+        email: `test-${Date.now()}-${crypto.randomUUID()}@example.com`,
+        role: "member" as const,
       };
 
-      const response = await app.handle(
-        new Request("http://localhost/api/users", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(userData),
-        }),
-      );
+      const body = await createUser(userData);
 
-      expect(response.status).toBe(201);
-      const body = (await response.json()) as {
-        firstName: string;
-        lastName: string;
-        email: string;
-        role: string;
-        id: string;
-      };
       expect(body.firstName).toBe(userData.firstName);
       expect(body.lastName).toBe(userData.lastName);
       expect(body.email).toBe(userData.email);
@@ -111,24 +130,15 @@ describe("API Integration Tests", () => {
 
   describe("GET /api/users/:id", () => {
     it("should retrieve a user by ID", async () => {
-      // 1. Create a user
       const userData = {
         firstName: "Fetch",
         lastName: "ById",
-        email: `fetch-${Date.now()}@example.com`,
-        role: "member",
+        email: `fetch-${Date.now()}-${crypto.randomUUID()}@example.com`,
+        role: "member" as const,
       };
 
-      const createResponse = await app.handle(
-        new Request("http://localhost/api/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(userData),
-        }),
-      );
-      const createdUser = (await createResponse.json()) as { id: string };
+      const createdUser = await createUser(userData);
 
-      // 2. Fetch the user
       const response = await app.handle(
         new Request(`http://localhost/api/users/${createdUser.id}`),
       );
@@ -149,26 +159,127 @@ describe("API Integration Tests", () => {
     });
   });
 
-  describe("DELETE /api/users/:id", () => {
-    it("should delete a user and make it unavailable via GET", async () => {
-      // 1. Create a user
-      const userData = {
-        firstName: "Delete",
-        lastName: "Me",
-        email: `delete-${Date.now()}@example.com`,
-        role: "viewer",
-      };
+  describe("PATCH /api/users/:id", () => {
+    it("should activate a deactivated user", async () => {
+      const createdUser = await createUser();
 
-      const createResponse = await app.handle(
-        new Request("http://localhost/api/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(userData),
+      const deactivateResponse = await app.handle(
+        new Request(`http://localhost/api/users/${createdUser.id}/deactivate`, {
+          method: "PATCH",
         }),
       );
-      const createdUser = (await createResponse.json()) as { id: string };
+      expect(deactivateResponse.status).toBe(204);
 
-      // 2. Delete the user
+      const activateResponse = await app.handle(
+        new Request(`http://localhost/api/users/${createdUser.id}/activate`, {
+          method: "PATCH",
+        }),
+      );
+      expect(activateResponse.status).toBe(204);
+
+      const getResponse = await app.handle(
+        new Request(`http://localhost/api/users/${createdUser.id}`),
+      );
+      const body = (await getResponse.json()) as { isActive: boolean };
+      expect(body.isActive).toBe(true);
+    });
+
+    it("should deactivate an active user", async () => {
+      const createdUser = await createUser();
+
+      const response = await app.handle(
+        new Request(`http://localhost/api/users/${createdUser.id}/deactivate`, {
+          method: "PATCH",
+        }),
+      );
+
+      expect(response.status).toBe(204);
+
+      const getResponse = await app.handle(
+        new Request(`http://localhost/api/users/${createdUser.id}`),
+      );
+      const body = (await getResponse.json()) as { isActive: boolean };
+      expect(body.isActive).toBe(false);
+    });
+
+    it("should change a user email", async () => {
+      const createdUser = await createUser();
+      const newEmail = `changed-${Date.now()}-${crypto.randomUUID()}@example.com`;
+
+      const response = await app.handle(
+        new Request(`http://localhost/api/users/${createdUser.id}/email`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: newEmail }),
+        }),
+      );
+
+      expect(response.status).toBe(204);
+
+      const getResponse = await app.handle(
+        new Request(`http://localhost/api/users/${createdUser.id}`),
+      );
+      const body = (await getResponse.json()) as { email: string };
+      expect(body.email).toBe(newEmail);
+      expect(body.email).not.toBe(createdUser.email);
+    });
+
+    it("should change a user role", async () => {
+      const createdUser = await createUser({ role: "member" });
+
+      const response = await app.handle(
+        new Request(`http://localhost/api/users/${createdUser.id}/role`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: "admin" }),
+        }),
+      );
+
+      expect(response.status).toBe(204);
+
+      const getResponse = await app.handle(
+        new Request(`http://localhost/api/users/${createdUser.id}`),
+      );
+      const body = (await getResponse.json()) as { role: string };
+      expect(body.role).toBe("admin");
+    });
+
+    it("should return 409 when changing to an existing email", async () => {
+      const existingUser = await createUser();
+      const targetUser = await createUser();
+
+      const response = await app.handle(
+        new Request(`http://localhost/api/users/${targetUser.id}/email`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: existingUser.email }),
+        }),
+      );
+
+      expect(response.status).toBe(409);
+    });
+
+    it("should return 404 when activating a non-existent user", async () => {
+      const response = await app.handle(
+        new Request(
+          "http://localhost/api/users/00000000-0000-0000-0000-000000000000/activate",
+          { method: "PATCH" },
+        ),
+      );
+
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe("DELETE /api/users/:id", () => {
+    it("should delete a user and make it unavailable via GET", async () => {
+      const createdUser = await createUser({
+        firstName: "Delete",
+        lastName: "Me",
+        email: `delete-${Date.now()}-${crypto.randomUUID()}@example.com`,
+        role: "viewer",
+      });
+
       const deleteResponse = await app.handle(
         new Request(`http://localhost/api/users/${createdUser.id}`, {
           method: "DELETE",
@@ -176,7 +287,6 @@ describe("API Integration Tests", () => {
       );
       expect(deleteResponse.status).toBe(204);
 
-      // 3. Verify it's gone
       const getResponse = await app.handle(
         new Request(`http://localhost/api/users/${createdUser.id}`),
       );
