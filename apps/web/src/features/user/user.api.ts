@@ -38,6 +38,51 @@ export const userApi = {
     }
     return data;
   },
+
+  activate: async (id: string) => {
+    const { error } = await api.api.users({ id }).activate.patch();
+    if (error) {
+      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
+      const message = (error.value as any)?.error?.message || "Activation failed";
+      throw new Error(message);
+    }
+  },
+
+  deactivate: async (id: string) => {
+    const { error } = await api.api.users({ id }).deactivate.patch();
+    if (error) {
+      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
+      const message = (error.value as any)?.error?.message || "Deactivation failed";
+      throw new Error(message);
+    }
+  },
+
+  changeEmail: async (id: string, email: string) => {
+    const { error } = await api.api.users({ id }).email.patch({ email });
+    if (error) {
+      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
+      const message = (error.value as any)?.error?.message || "Email update failed";
+      throw new Error(message);
+    }
+  },
+
+  changeRole: async (id: string, role: "admin" | "member" | "viewer") => {
+    const { error } = await api.api.users({ id }).role.patch({ role });
+    if (error) {
+      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
+      const message = (error.value as any)?.error?.message || "Role update failed";
+      throw new Error(message);
+    }
+  },
+
+  delete: async (id: string) => {
+    const { error } = await api.api.users({ id }).delete();
+    if (error) {
+      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
+      const message = (error.value as any)?.error?.message || "Deletion failed";
+      throw new Error(message);
+    }
+  },
 };
 
 export const userKeys = {
@@ -61,6 +106,58 @@ export const useCreateUser = () => {
   return useMutation({
     mutationFn: (body: Parameters<typeof userApi.create>[0]) =>
       userApi.create(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    },
+  });
+};
+
+export const useActivateUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => userApi.activate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    },
+  });
+};
+
+export const useDeactivateUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => userApi.deactivate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    },
+  });
+};
+
+export const useChangeUserEmail = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, email }: { id: string; email: string }) =>
+      userApi.changeEmail(id, email),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    },
+  });
+};
+
+export const useChangeUserRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, role }: { id: string; role: "admin" | "member" | "viewer" }) =>
+      userApi.changeRole(id, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    },
+  });
+};
+
+export const useDeleteUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => userApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: userKeys.lists() });
     },
