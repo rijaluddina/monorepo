@@ -1,9 +1,12 @@
 import type { UserDTO } from "@repo/application";
 import { useState } from "react";
 import {
+  useActivateUser,
   useChangeUserEmail,
   useChangeUserRole,
   useCreateUser,
+  useDeactivateUser,
+  useDeleteUser,
   useUsers,
 } from "./user.api";
 
@@ -214,34 +217,82 @@ function EditUserModal({ user, onClose }: EditUserModalProps) {
 // ─── User Table Row ────────────────────────────────────────────────────────
 
 function UserRow({ user }: { user: UserDTO }) {
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const activate = useActivateUser();
+  const deactivate = useDeactivateUser();
+  const deleteUser = useDeleteUser();
+
+  const handleToggleStatus = async () => {
+    if (user.isActive) {
+      await deactivate.mutateAsync(user.id);
+    } else {
+      await activate.mutateAsync(user.id);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete ${user.fullName}?`)) {
+      await deleteUser.mutateAsync(user.id);
+    }
+  };
+
   const initials =
     `${user.firstName[0] ?? ""}${user.lastName[0] ?? ""}`.toUpperCase();
 
   return (
-    <tr>
-      <td>
-        <div className="user-info">
-          <div className="user-avatar">{initials}</div>
-          <div>
-            <div className="user-name">{user.fullName}</div>
-            <div className="user-email">{user.email}</div>
+    <>
+      <tr>
+        <td>
+          <div className="user-info">
+            <div className="user-avatar">{initials}</div>
+            <div>
+              <div className="user-name">{user.fullName}</div>
+              <div className="user-email">{user.email}</div>
+            </div>
           </div>
-        </div>
-      </td>
-      <td>
-        <span className={`badge badge-${user.role}`}>{user.role}</span>
-      </td>
-      <td>
-        <span
-          className={`badge ${user.isActive ? "badge-active" : "badge-inactive"}`}
-        >
-          {user.isActive ? "● Active" : "○ Inactive"}
-        </span>
-      </td>
-      <td style={{ color: "var(--text-secondary)", fontSize: "13px" }}>
-        {new Date(user.createdAt).toLocaleDateString()}
-      </td>
-    </tr>
+        </td>
+        <td>
+          <span className={`badge badge-${user.role}`}>{user.role}</span>
+        </td>
+        <td>
+          <span
+            className={`badge ${user.isActive ? "badge-active" : "badge-inactive"}`}
+          >
+            {user.isActive ? "● Active" : "○ Inactive"}
+          </span>
+        </td>
+        <td style={{ color: "var(--text-secondary)", fontSize: "13px" }}>
+          <div className="row-actions">
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={() => setIsEditOpen(true)}
+              type="button"
+            >
+              Edit
+            </button>
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={handleToggleStatus}
+              disabled={activate.isPending || deactivate.isPending}
+              type="button"
+            >
+              {user.isActive ? "Deactivate" : "Activate"}
+            </button>
+            <button
+              className="btn btn-sm btn-danger"
+              onClick={handleDelete}
+              disabled={deleteUser.isPending}
+              type="button"
+            >
+              Delete
+            </button>
+          </div>
+        </td>
+      </tr>
+      {isEditOpen && (
+        <EditUserModal user={user} onClose={() => setIsEditOpen(false)} />
+      )}
+    </>
   );
 }
 
@@ -267,7 +318,7 @@ export function UserList() {
               <th>User</th>
               <th>Role</th>
               <th>Status</th>
-              <th>Joined</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
