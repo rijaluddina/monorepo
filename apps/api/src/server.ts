@@ -1,7 +1,11 @@
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import {
+  ActivateUserCommand,
+  ChangeUserEmailCommand,
+  ChangeUserRoleCommand,
   CreateUserCommand,
+  DeactivateUserCommand,
   DeleteUserCommand,
   GetUserByIdQuery,
   GetUsersQuery,
@@ -99,12 +103,7 @@ export function createServer() {
               const result = await container.queryBus.ask<
                 GetUsersQuery,
                 PaginatedResult<UserDTO>
-              >(
-                new GetUsersQuery(
-                  Number(query.page ?? 1),
-                  Number(query.limit ?? 20),
-                ),
-              );
+              >(new GetUsersQuery(Number(query.page), Number(query.limit)));
 
               if (result.isErr()) {
                 set.status = result.error.statusCode ?? 500;
@@ -184,6 +183,7 @@ export function createServer() {
                 400: ErrorSchema,
                 404: ErrorSchema,
                 409: ErrorSchema,
+                422: t.Any(), // Validation error
                 500: ErrorSchema,
               },
               detail: { tags: ["Users"], summary: "Create a new user" },
@@ -221,6 +221,151 @@ export function createServer() {
                 500: ErrorSchema,
               },
               detail: { tags: ["Users"], summary: "Get user by ID" },
+            },
+          )
+
+          // PATCH /api/users/:id/activate
+          .patch(
+            "/:id/activate",
+            async ({ params, set }) => {
+              const result = await container.commandBus.dispatch<
+                ActivateUserCommand,
+                void
+              >(new ActivateUserCommand(params.id));
+
+              if (result.isErr()) {
+                set.status = result.error.statusCode ?? 500;
+                return {
+                  error: {
+                    code: result.error.code,
+                    message: result.error.message,
+                  },
+                };
+              }
+
+              set.status = 204;
+              return;
+            },
+            {
+              params: t.Object({ id: t.String() }),
+              response: {
+                204: t.Void(),
+                400: ErrorSchema,
+                404: ErrorSchema,
+                500: ErrorSchema,
+              },
+              detail: { tags: ["Users"], summary: "Activate a user" },
+            },
+          )
+
+          // PATCH /api/users/:id/deactivate
+          .patch(
+            "/:id/deactivate",
+            async ({ params, set }) => {
+              const result = await container.commandBus.dispatch<
+                DeactivateUserCommand,
+                void
+              >(new DeactivateUserCommand(params.id));
+
+              if (result.isErr()) {
+                set.status = result.error.statusCode ?? 500;
+                return {
+                  error: {
+                    code: result.error.code,
+                    message: result.error.message,
+                  },
+                };
+              }
+
+              set.status = 204;
+              return;
+            },
+            {
+              params: t.Object({ id: t.String() }),
+              response: {
+                204: t.Void(),
+                400: ErrorSchema,
+                404: ErrorSchema,
+                500: ErrorSchema,
+              },
+              detail: { tags: ["Users"], summary: "Deactivate a user" },
+            },
+          )
+
+          // PATCH /api/users/:id/email
+          .patch(
+            "/:id/email",
+            async ({ params, body, set }) => {
+              const result = await container.commandBus.dispatch<
+                ChangeUserEmailCommand,
+                void
+              >(new ChangeUserEmailCommand(params.id, body.email));
+
+              if (result.isErr()) {
+                set.status = result.error.statusCode ?? 500;
+                return {
+                  error: {
+                    code: result.error.code,
+                    message: result.error.message,
+                  },
+                };
+              }
+
+              set.status = 204;
+              return;
+            },
+            {
+              params: t.Object({ id: t.String() }),
+              body: t.Object({ email: t.String({ format: "email" }) }),
+              response: {
+                204: t.Void(),
+                400: ErrorSchema,
+                404: ErrorSchema,
+                409: ErrorSchema,
+                500: ErrorSchema,
+              },
+              detail: { tags: ["Users"], summary: "Change user email" },
+            },
+          )
+
+          // PATCH /api/users/:id/role
+          .patch(
+            "/:id/role",
+            async ({ params, body, set }) => {
+              const result = await container.commandBus.dispatch<
+                ChangeUserRoleCommand,
+                void
+              >(new ChangeUserRoleCommand(params.id, body.role));
+
+              if (result.isErr()) {
+                set.status = result.error.statusCode ?? 500;
+                return {
+                  error: {
+                    code: result.error.code,
+                    message: result.error.message,
+                  },
+                };
+              }
+
+              set.status = 204;
+              return;
+            },
+            {
+              params: t.Object({ id: t.String() }),
+              body: t.Object({
+                role: t.Union([
+                  t.Literal("admin"),
+                  t.Literal("member"),
+                  t.Literal("viewer"),
+                ]),
+              }),
+              response: {
+                204: t.Void(),
+                400: ErrorSchema,
+                404: ErrorSchema,
+                500: ErrorSchema,
+              },
+              detail: { tags: ["Users"], summary: "Change user role" },
             },
           )
 
@@ -273,8 +418,7 @@ export function createServer() {
       return {
         error: {
           code: appError.code ?? "INTERNAL_ERROR",
-          message: appError.message,
-          status,
+          message: status === 500 ? "Internal server error" : appError.message,
         },
       };
     });
