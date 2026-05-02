@@ -1,6 +1,11 @@
 import type { UserDTO } from "@repo/application";
 import { useState } from "react";
-import { useCreateUser, useUsers } from "./user.api";
+import {
+  useChangeUserEmail,
+  useChangeUserRole,
+  useCreateUser,
+  useUsers,
+} from "./user.api";
 
 // ─── Create User Form ──────────────────────────────────────────────────────
 
@@ -112,6 +117,96 @@ function CreateUserForm() {
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+// ─── Edit User Modal ───────────────────────────────────────────────────────
+
+interface EditUserModalProps {
+  user: UserDTO;
+  onClose: () => void;
+}
+
+function EditUserModal({ user, onClose }: EditUserModalProps) {
+  const [email, setEmail] = useState(user.email);
+  const [role, setRole] = useState(user.role);
+
+  const changeEmail = useChangeUserEmail();
+  const changeRole = useChangeUserRole();
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      if (email !== user.email) {
+        await changeEmail.mutateAsync({ id: user.id, email });
+      }
+      if (role !== user.role) {
+        await changeRole.mutateAsync({ id: user.id, role: role as any });
+      }
+      onClose();
+    } catch (err) {
+      // Handled by mutation hooks
+    }
+  }
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content card">
+        <div className="card-header">
+          <span className="card-title">✏️ Edit User</span>
+          <button className="btn btn-ghost" onClick={onClose} type="button">
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="form-inner">
+          <div className="form-group">
+            <label htmlFor="edit-email">Email</label>
+            <input
+              id="edit-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="edit-role">Role</label>
+            <select
+              id="edit-role"
+              value={role}
+              onChange={(e) => setRole(e.target.value as any)}
+            >
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+              <option value="viewer">Viewer</option>
+            </select>
+          </div>
+
+          {(changeEmail.isError || changeRole.isError) && (
+            <div className="alert alert-error">
+              {((changeEmail.error || changeRole.error) as Error)?.message ||
+                "Update failed"}
+            </div>
+          )}
+
+          <div className="form-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={changeEmail.isPending || changeRole.isPending}
+            >
+              {changeEmail.isPending || changeRole.isPending
+                ? "Saving..."
+                : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
