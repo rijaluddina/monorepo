@@ -54,7 +54,7 @@ export class DrizzleEventStore implements IEventStore {
 
     return ok(
       entries.map((e) => {
-        const payload = e.payload as any;
+        const payload = e.payload as Record<string, unknown>;
         return {
           ...payload,
           aggregateId: e.aggregateId,
@@ -78,7 +78,7 @@ export class DrizzleEventStore implements IEventStore {
 
     return ok(
       entries.map((e) => {
-        const payload = e.payload as any;
+        const payload = e.payload as Record<string, unknown>;
         return {
           ...payload,
           aggregateId: e.aggregateId,

@@ -1,11 +1,13 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema.ts";
 
 // Load .env from workspace root
-const rootEnvPath = path.resolve(process.cwd(), "../../.env");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootEnvPath = path.resolve(__dirname, "../../../../.env");
 config({ path: rootEnvPath });
 
 const databaseUrl = process.env.DATABASE_URL;

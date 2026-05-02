@@ -1,7 +1,7 @@
 import type { IEventStore, IUserRepository } from "@repo/application";
 import { Email, UniqueId, User, UserName } from "@repo/domain";
 import {
-  AppError,
+  type AppError,
   type Optional,
   type PersistenceContext,
   type Result,
