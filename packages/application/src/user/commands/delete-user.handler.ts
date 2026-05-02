@@ -1,6 +1,8 @@
 import { NotFoundError, err, isErr, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
 import type { CommandHandler } from "../../shared/command-handler.ts";
+import type { IEventBus } from "../../shared/event-bus.port.ts";
+import type { IEventStore } from "../../shared/event-store.port.ts";
 import type { IUnitOfWork } from "../../shared/unit-of-work.port.ts";
 import type { IUserRepository } from "../ports/user-repository.port.ts";
 import type { DeleteUserCommand } from "./delete-user.command.ts";
@@ -10,6 +12,8 @@ export class DeleteUserCommandHandler
 {
   constructor(
     private readonly userRepository: IUserRepository,
+    private readonly eventStore: IEventStore,
+    private readonly eventBus: IEventBus,
     private readonly unitOfWork: IUnitOfWork,
   ) {}
 
@@ -22,17 +26,18 @@ export class DeleteUserCommandHandler
       return err(new NotFoundError("User", command.userId));
     }
 
-    // In this domain, we delete the user.
-    // We could also just deactivate them (soft delete).
-    // Let's do hard delete for this example.
+    user.delete();
 
     const transactionResult = await this.unitOfWork.run(async (ctx) => {
+      const appendResult = await this.eventStore.append(
+        user.id.value,
+        user.domainEvents,
+        ctx,
+      );
+      if (isErr(appendResult)) return err(appendResult.error);
+
       const deleteResult = await this.userRepository.delete(user.id.value, ctx);
       if (isErr(deleteResult)) return err(deleteResult.error);
-
-      // We might want to record a UserDeleted event before the user record is gone,
-      // or just rely on the event store.
-      // user.delete(); // If we had a delete method that raises an event
 
       return ok(undefined);
     });
@@ -41,8 +46,10 @@ export class DeleteUserCommandHandler
       return err(transactionResult.error);
     }
 
-    // Usually events are published AFTER the aggregate is gone from state but exists in history.
-    // If we had a UserDeleted event, we'd publish it here.
+    const publishResult = await this.eventBus.publishAll(user.domainEvents);
+    if (isErr(publishResult)) return err(publishResult.error);
+
+    user.clearEvents();
 
     return ok();
   }
