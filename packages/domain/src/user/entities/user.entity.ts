@@ -148,7 +148,19 @@ export class User extends AggregateRoot<UserProps> {
       return err(new ValidationError("First event must be USER_CREATED"));
     }
 
-    const user = new User(null as unknown as UserProps, id);
+    // Create an empty sentinel to satisfy types before replay overwrites it
+    const emptyProps: UserProps = {
+      // biome-ignore lint/style/noNonNullAssertion: safe to use here for sentinel
+      name: UserName.create("Empty", "User").value!,
+      // biome-ignore lint/style/noNonNullAssertion: safe to use here for sentinel
+      email: Email.create("empty@example.com").value!,
+      role: "viewer",
+      isActive: false,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    };
+
+    const user = new User(emptyProps, id);
     const result = user.replay(events);
     if (isErr(result)) return err(result.error);
     return ok(user);
@@ -307,6 +319,8 @@ export class User extends AggregateRoot<UserProps> {
         };
         break;
       case USER_DELETED:
+        // No state mutation needed for deletion since the repository handles
+        // hard deletes, and this aggregate will be discarded.
         break;
       default:
         return err(
