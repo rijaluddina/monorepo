@@ -297,10 +297,6 @@ input::placeholder {
   color: var(--text-muted);
 }
 
-select option {
-  background: var(--bg-secondary);
-}
-
 .btn {
   display: inline-flex;
   align-items: center;
@@ -351,6 +347,7 @@ select option {
   margin-top: 16px;
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
 }
 
 /* ─── User Table ──────────────────────────────────────────────────────────── */

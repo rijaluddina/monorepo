@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
+  return (error as any)?.value?.error?.message || fallback;
+};
+
 export const userApi = {
   getAll: async (page = 1, limit = 20) => {
     const { data, error } = await api.api.users.get({
       query: { page, limit },
     });
     if (error) {
-      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
-      const message = (error.value as any)?.error?.message || "Request failed";
-      throw new Error(message);
+      throw new Error(getErrorMessage(error, "Request failed"));
     }
     return data;
   },
@@ -17,9 +20,7 @@ export const userApi = {
   getById: async (id: string) => {
     const { data, error } = await api.api.users({ id }).get();
     if (error) {
-      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
-      const message = (error.value as any)?.error?.message || "User not found";
-      throw new Error(message);
+      throw new Error(getErrorMessage(error, "User not found"));
     }
     return data;
   },
@@ -32,9 +33,7 @@ export const userApi = {
   }) => {
     const { data, error } = await api.api.users.post(body);
     if (error) {
-      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
-      const message = (error.value as any)?.error?.message || "Request failed";
-      throw new Error(message);
+      throw new Error(getErrorMessage(error, "Request failed"));
     }
     return data;
   },
@@ -42,49 +41,35 @@ export const userApi = {
   activate: async (id: string) => {
     const { error } = await api.api.users({ id }).activate.patch();
     if (error) {
-      const message =
-        // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
-        (error.value as any)?.error?.message || "Activation failed";
-      throw new Error(message);
+      throw new Error(getErrorMessage(error, "Activation failed"));
     }
   },
 
   deactivate: async (id: string) => {
     const { error } = await api.api.users({ id }).deactivate.patch();
     if (error) {
-      const message =
-        // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
-        (error.value as any)?.error?.message || "Deactivation failed";
-      throw new Error(message);
+      throw new Error(getErrorMessage(error, "Deactivation failed"));
     }
   },
 
   changeEmail: async (id: string, email: string) => {
     const { error } = await api.api.users({ id }).email.patch({ email });
     if (error) {
-      const message =
-        // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
-        (error.value as any)?.error?.message || "Email update failed";
-      throw new Error(message);
+      throw new Error(getErrorMessage(error, "Email update failed"));
     }
   },
 
   changeRole: async (id: string, role: "admin" | "member" | "viewer") => {
     const { error } = await api.api.users({ id }).role.patch({ role });
     if (error) {
-      const message =
-        // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
-        (error.value as any)?.error?.message || "Role update failed";
-      throw new Error(message);
+      throw new Error(getErrorMessage(error, "Role update failed"));
     }
   },
 
   delete: async (id: string) => {
     const { error } = await api.api.users({ id }).delete();
     if (error) {
-      // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
-      const message = (error.value as any)?.error?.message || "Deletion failed";
-      throw new Error(message);
+      throw new Error(getErrorMessage(error, "Deletion failed"));
     }
   },
 };

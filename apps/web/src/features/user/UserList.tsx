@@ -1,5 +1,6 @@
 import type { UserDTO } from "@repo/application";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   useActivateUser,
   useChangeUserEmail,
@@ -263,7 +264,7 @@ function DeleteUserModal({ user, onClose }: DeleteUserModalProps) {
             </button>
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-danger"
               onClick={handleDelete}
               disabled={deleteUser.isPending}
             >
@@ -285,10 +286,14 @@ function UserRow({ user }: { user: UserDTO }) {
   const deactivate = useDeactivateUser();
 
   const handleToggleStatus = async () => {
-    if (user.isActive) {
-      await deactivate.mutateAsync(user.id);
-    } else {
-      await activate.mutateAsync(user.id);
+    try {
+      if (user.isActive) {
+        await deactivate.mutateAsync(user.id);
+      } else {
+        await activate.mutateAsync(user.id);
+      }
+    } catch (err) {
+      // Handled by mutation hook
     }
   };
 
@@ -341,12 +346,19 @@ function UserRow({ user }: { user: UserDTO }) {
             Delete
           </button>
         </div>
-        {isEditOpen && (
-          <EditUserModal user={user} onClose={() => setIsEditOpen(false)} />
-        )}
-        {isDeleteOpen && (
-          <DeleteUserModal user={user} onClose={() => setIsDeleteOpen(false)} />
-        )}
+        {isEditOpen &&
+          createPortal(
+            <EditUserModal user={user} onClose={() => setIsEditOpen(false)} />,
+            document.body,
+          )}
+        {isDeleteOpen &&
+          createPortal(
+            <DeleteUserModal
+              user={user}
+              onClose={() => setIsDeleteOpen(false)}
+            />,
+            document.body,
+          )}
       </td>
     </tr>
   );
