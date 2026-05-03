@@ -150,10 +150,8 @@ export class User extends AggregateRoot<UserProps> {
 
     // Create an empty sentinel to satisfy types before replay overwrites it
     const emptyProps: UserProps = {
-      // biome-ignore lint/style/noNonNullAssertion: safe to use here for sentinel
-      name: UserName.create("Empty", "User").value!,
-      // biome-ignore lint/style/noNonNullAssertion: safe to use here for sentinel
-      email: Email.create("empty@example.com").value!,
+      name: UserName.create("Empty", "User").unwrap(),
+      email: Email.create("empty@example.com").unwrap(),
       role: "viewer",
       isActive: false,
       createdAt: new Date(0),
