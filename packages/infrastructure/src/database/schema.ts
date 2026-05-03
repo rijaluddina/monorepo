@@ -25,6 +25,7 @@ export const users = pgTable(
     email: text("email").notNull(),
     role: userRoleEnum("role").notNull().default("MEMBER"),
     isActive: boolean("is_active").notNull().default(true),
+    version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at", { precision: 3, mode: "date" })
       .notNull()
       .defaultNow(),

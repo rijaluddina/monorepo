@@ -23,6 +23,10 @@ export abstract class AggregateRoot<T> extends Entity<T> {
     return this._version;
   }
 
+  protected setVersion(version: number): void {
+    this._version = version;
+  }
+
   protected addDomainEvent(event: DomainEvent): void {
     this._domainEvents.push(event);
     this._version++;

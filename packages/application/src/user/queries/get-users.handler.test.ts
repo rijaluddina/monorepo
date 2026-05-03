@@ -23,6 +23,7 @@ describe("GetUsersQueryHandler", () => {
         updatedAt: new Date(),
       },
       new UniqueId(),
+      1,
     );
 
     mockUserRepository.findAll.mockResolvedValue(

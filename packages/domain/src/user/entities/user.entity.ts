@@ -122,8 +122,14 @@ export class User extends AggregateRoot<UserProps> {
    * Reconstitute a User from its persisted state (no events raised).
    * Used by the repository when loading from the database.
    */
-  public static reconstitute(props: UserProps, id: UniqueId): User {
-    return new User(props, id);
+  public static reconstitute(
+    props: UserProps,
+    id: UniqueId,
+    version: number,
+  ): User {
+    const user = new User(props, id);
+    user.setVersion(version);
+    return user;
   }
 
   /**

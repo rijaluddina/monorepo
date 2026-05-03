@@ -1,6 +1,6 @@
 {
-  "id": "417ef61e-064e-48e1-b538-c7c935009627",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "a4eeec1c-adb3-4a90-8634-dfb2ea25bc9f",
+  "prevId": "417ef61e-064e-48e1-b538-c7c935009627",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -147,6 +147,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
         },
         "created_at": {
           "name": "created_at",

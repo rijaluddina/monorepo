@@ -5,22 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1777523176570,
-      "tag": "0000_big_captain_america",
+      "when": 1777776093233,
+      "tag": "0000_typical_namora",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1777525703000,
-      "tag": "0001_add_updated_at_trigger",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1777756152599,
-      "tag": "0002_event_store_aggregate_version_idx",
+      "when": 1777780819875,
+      "tag": "0001_quiet_jean_grey",
       "breakpoints": true
     }
   ]

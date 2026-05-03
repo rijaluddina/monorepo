@@ -128,6 +128,7 @@ export class DrizzleUserRepository implements IUserRepository {
         email: user.email.value,
         role: user.role.toUpperCase() as "ADMIN" | "MEMBER" | "VIEWER",
         isActive: user.isActive,
+        version: user.version,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       });
@@ -151,6 +152,7 @@ export class DrizzleUserRepository implements IUserRepository {
           email: user.email.value,
           role: user.role.toUpperCase() as "ADMIN" | "MEMBER" | "VIEWER",
           isActive: user.isActive,
+          version: user.version,
           updatedAt: user.updatedAt,
         })
         .where(eq(users.id, user.id.value));
@@ -213,6 +215,7 @@ export class DrizzleUserRepository implements IUserRepository {
           updatedAt: record.updatedAt,
         },
         new UniqueId(record.id),
+        record.version,
       ),
     );
   }
