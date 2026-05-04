@@ -117,6 +117,32 @@ POST /api/users
 
 ---
 
+## Event Sourcing Architecture
+
+This repo uses a **hybrid approach**:
+
+| Aspect | Pure Event Sourcing | This Repo (Hybrid) |
+|--------|--------------------|--------------------|
+| Source of truth | Event store | `users` table |
+| State rebuild | Replay events | SELECT from `users` |
+| Persist mutation | Append events only | UPDATE `users` + append to `event_store` |
+| Deletion | Append deletion event | Hard delete |
+
+**Current design:**
+- `users` table = write model + source of truth
+- `event_store` table = audit log / domain event history
+- State is read directly from `users`, not reconstructed from events
+
+**If you need pure event sourcing:**
+1. Remove direct `INSERT/UPDATE/DELETE` on `users`
+2. Make event store the write model
+3. Rebuild read model (projections) from event stream
+4. Query reads from projections, not from `users`
+
+**Outbox Pattern:** Events are written to `outbox` table in same transaction as aggregate changes, then processed asynchronously by the outbox processor to ensure reliable event publishing.
+
+---
+
 ## Adding a New Bounded Context
 
 1. **Domain** — add `packages/domain/src/<context>/`

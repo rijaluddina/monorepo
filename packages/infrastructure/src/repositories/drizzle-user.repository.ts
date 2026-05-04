@@ -2,6 +2,7 @@ import type { IEventStore, IUserRepository } from "@repo/application";
 import { Email, UniqueId, User, UserName } from "@repo/domain";
 import {
   AppError,
+  ConflictError,
   type Optional,
   type PersistenceContext,
   type Result,
@@ -9,7 +10,7 @@ import {
   err,
   ok,
 } from "@repo/shared";
-import { count, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import type { DrizzleDB } from "../database/drizzle.client.ts";
 import { fromPersistenceContext } from "../database/persistence-context.ts";
 import { users } from "../database/schema.ts";
@@ -144,7 +145,7 @@ export class DrizzleUserRepository implements IUserRepository {
   ): Promise<Result<void, AppError>> {
     const db = this.getDb(ctx);
     try {
-      await db
+      const result = await db
         .update(users)
         .set({
           firstName: user.name.firstName,
@@ -155,7 +156,17 @@ export class DrizzleUserRepository implements IUserRepository {
           version: user.version,
           updatedAt: user.updatedAt,
         })
-        .where(eq(users.id, user.id.value));
+        .where(
+          and(eq(users.id, user.id.value), eq(users.version, user.version - 1)),
+        );
+
+      if (result.rowCount === 0) {
+        return err(
+          new ConflictError(
+            "Concurrency conflict: user was modified by another process",
+          ),
+        );
+      }
       return ok();
     } catch (error) {
       return err(this.toInfrastructureError(error));

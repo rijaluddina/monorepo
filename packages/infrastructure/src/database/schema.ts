@@ -62,3 +62,15 @@ export const eventStore = pgTable(
     ),
   ],
 );
+
+// ─── Outbox Table ────────────────────────────────────────────────────────────
+
+export const outbox = pgTable("outbox", {
+  id: text("id").primaryKey(),
+  aggregateId: text("aggregate_id").notNull(),
+  eventType: text("event_type").notNull(),
+  payload: jsonb("payload").notNull(),
+  createdAt: timestamp("created_at", { precision: 3, mode: "date" })
+    .notNull()
+    .defaultNow(),
+});
