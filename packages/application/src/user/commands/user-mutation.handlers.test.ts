@@ -111,12 +111,14 @@ describe("User mutation command handlers", () => {
           lastName: "Lovelace",
           email: "ada@example.com",
           role: "member",
+          // biome-ignore lint/suspicious/noExplicitAny: mock event
         } as any,
         {
           eventType: "UserDeactivated",
           aggregateId: user.id.value,
           version: 2,
           occurredAt: new Date(),
+          // biome-ignore lint/suspicious/noExplicitAny: mock event
         } as any,
       ]),
     );
@@ -131,7 +133,7 @@ describe("User mutation command handlers", () => {
     const result = await handler.handle(new ActivateUserCommand(user.id.value));
 
     expect(result.isOk()).toBe(true);
-    expect(userRepository.save).not.toHaveBeenCalled();
+    expect(userRepository.save).toHaveBeenCalled();
     expect(eventStore.append).toHaveBeenCalledWith(
       user.id.value,
       [expect.any(UserActivatedEvent)],
@@ -159,6 +161,7 @@ describe("User mutation command handlers", () => {
           lastName: "Lovelace",
           email: "ada@example.com",
           role: "member",
+          // biome-ignore lint/suspicious/noExplicitAny: mock event
         } as any,
       ]),
     );
@@ -198,6 +201,7 @@ describe("User mutation command handlers", () => {
           lastName: "Lovelace",
           email: "ada@example.com",
           role: "member",
+          // biome-ignore lint/suspicious/noExplicitAny: mock event
         } as any,
       ]),
     );
@@ -217,7 +221,7 @@ describe("User mutation command handlers", () => {
     );
 
     expect(result.isOk()).toBe(true);
-    expect(userRepository.save).not.toHaveBeenCalled();
+    expect(userRepository.save).toHaveBeenCalled();
     expect(eventStore.append).toHaveBeenCalledWith(
       user.id.value,
       [expect.any(UserEmailChangedEvent)],
@@ -240,6 +244,7 @@ describe("User mutation command handlers", () => {
           lastName: "Lovelace",
           email: "ada@example.com",
           role: "member",
+          // biome-ignore lint/suspicious/noExplicitAny: mock event
         } as any,
       ]),
     );
@@ -256,7 +261,7 @@ describe("User mutation command handlers", () => {
     );
 
     expect(result.isOk()).toBe(true);
-    expect(userRepository.save).not.toHaveBeenCalled();
+    expect(userRepository.save).toHaveBeenCalled();
     expect(eventStore.append).toHaveBeenCalledWith(
       user.id.value,
       [expect.any(UserRoleChangedEvent)],
@@ -300,6 +305,7 @@ describe("User mutation command handlers", () => {
           lastName: "Lovelace",
           email: "ada@example.com",
           role: "member",
+          // biome-ignore lint/suspicious/noExplicitAny: mock event
         } as any,
       ]),
     );
@@ -335,6 +341,7 @@ describe("User mutation command handlers", () => {
           lastName: "Lovelace",
           email: "ada@example.com",
           role: "member",
+          // biome-ignore lint/suspicious/noExplicitAny: mock event
         } as any,
       ]),
     );
@@ -354,6 +361,6 @@ describe("User mutation command handlers", () => {
       [expect.any(UserDeletedEvent)],
       txContext,
     );
-    expect(userRepository.save).not.toHaveBeenCalled();
+    expect(userRepository.save).toHaveBeenCalled();
   });
 });

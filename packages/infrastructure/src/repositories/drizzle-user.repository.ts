@@ -44,7 +44,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const db = this.getDb(ctx);
     try {
       const record = await db.query.users.findFirst({
-        where: eq(users.id, id),
+        where: and(eq(users.id, id), isNull(users.deletedAt)),
       });
       if (!record) return ok(undefined);
 
@@ -228,6 +228,7 @@ export class DrizzleUserRepository implements IUserRepository {
           isActive: record.isActive,
           createdAt: record.createdAt,
           updatedAt: record.updatedAt,
+          deletedAt: record.deletedAt ?? undefined,
         },
         new UniqueId(record.id),
         record.version,

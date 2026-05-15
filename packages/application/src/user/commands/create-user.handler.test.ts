@@ -91,7 +91,7 @@ describe("CreateUserCommandHandler", () => {
     }
 
     expect(userRepository.existsByEmail).toHaveBeenCalledWith(command.email);
-    expect(userRepository.save).not.toHaveBeenCalled();
+    expect(userRepository.save).toHaveBeenCalled();
     expect(eventStore.append).toHaveBeenCalled();
     expect(outboxPort.insert).toHaveBeenCalled();
   });

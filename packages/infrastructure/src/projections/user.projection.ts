@@ -74,7 +74,7 @@ export class UserProjection {
       const result = User.fromEvents([event], new UniqueId(event.aggregateId));
       if (result.isErr()) {
         console.error(
-          `[UserProjection] Failed to create user from event:`,
+          "[UserProjection] Failed to create user from event:",
           result.error,
         );
         return;

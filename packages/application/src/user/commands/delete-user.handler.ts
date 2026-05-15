@@ -13,16 +13,6 @@ export class DeleteUserCommandHandler
   extends UserMutationHandler
   implements CommandHandler<DeleteUserCommand, void>
 {
-  constructor(
-    userRepository: IUserRepository,
-    eventStore: IEventStore,
-    eventBus: IEventBus,
-    outboxPort: IOutboxPort,
-    unitOfWork: IUnitOfWork,
-  ) {
-    super(userRepository, eventStore, eventBus, outboxPort, unitOfWork);
-  }
-
   async handle(command: DeleteUserCommand): Promise<Result<void>> {
     return this.mutateUser(command.userId, (user) => {
       user.delete();
