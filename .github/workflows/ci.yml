@@ -7,6 +7,20 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v3
       - name: Setup Bun
@@ -19,5 +33,11 @@ jobs:
         run: bun run lint
       - name: Run typecheck
         run: bun run typecheck
+      - name: Push DB schema
+        run: bun run --filter @repo/infrastructure db:push
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/db
       - name: Run tests
-        run: bun test
+        run: bun run test
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/db
