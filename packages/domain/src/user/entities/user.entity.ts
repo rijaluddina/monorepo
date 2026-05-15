@@ -45,6 +45,7 @@ export interface UserProps {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date;
 }
 
 export interface CreateUserProps {
@@ -75,7 +76,6 @@ export class User extends AggregateRoot<UserProps> {
     id?: UniqueId,
   ): Result<User, ValidationError> {
     const userId = id ?? new UniqueId();
-    const now = new Date();
 
     const nameResult = UserName.create(
       createProps.firstName,
@@ -83,37 +83,37 @@ export class User extends AggregateRoot<UserProps> {
     );
     const emailResult = Email.create(createProps.email);
 
-    const result = combine<[UserName, Email], ValidationError>([
-      nameResult,
-      emailResult,
-    ]);
+    const result = combine([nameResult, emailResult]);
 
     if (isErr(result)) {
       return err<User, ValidationError>(result.error);
     }
 
     const [name, email] = result.value;
+    const role = createProps.role ?? "member";
 
-    const props: UserProps = {
-      name,
-      email,
-      role: createProps.role ?? "member",
+    // Create an empty sentinel to satisfy types before apply overwrites it
+    const emptyProps: UserProps = {
+      name: name,
+      email: email,
+      role: role,
       isActive: true,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
-    const user = new User(props, userId);
+    const user = new User(emptyProps, userId);
 
-    user.addDomainEvent(
-      new UserCreatedEvent(
-        userId.value,
-        name,
-        email,
-        props.role,
-        user.version + 1,
-      ),
+    const event = new UserCreatedEvent(
+      userId.value,
+      name,
+      email,
+      role,
+      user.version + 1,
     );
+
+    user.apply(event);
+    user.addDomainEvent(event);
 
     return ok(user);
   }
@@ -190,6 +190,14 @@ export class User extends AggregateRoot<UserProps> {
     return this.props.updatedAt;
   }
 
+  get deletedAt(): Date | undefined {
+    return this.props.deletedAt;
+  }
+
+  get isDeleted(): boolean {
+    return !!this.props.deletedAt;
+  }
+
   // ─── Mutations ────────────────────────────────────────────────────────
 
   public changeEmail(newEmail: string): Result<void, ValidationError> {
@@ -199,17 +207,15 @@ export class User extends AggregateRoot<UserProps> {
     const email = emailResult.value;
     if (this.props.email.equals(email)) return ok();
 
-    this.addDomainEvent(
-      new UserEmailChangedEvent(
-        this.id.value,
-        this.props.email.value,
-        email.value,
-        this.version + 1,
-      ),
+    const event = new UserEmailChangedEvent(
+      this.id.value,
+      this.props.email.value,
+      email.value,
+      this.version + 1,
     );
 
-    this.props.email = email;
-    this.props.updatedAt = new Date();
+    this.apply(event);
+    this.addDomainEvent(event);
 
     return ok();
   }
@@ -217,43 +223,37 @@ export class User extends AggregateRoot<UserProps> {
   public deactivate(): void {
     if (!this.props.isActive) return;
 
-    this.addDomainEvent(
-      new UserDeactivatedEvent(this.id.value, this.version + 1),
-    );
-
-    this.props.isActive = false;
-    this.props.updatedAt = new Date();
+    const event = new UserDeactivatedEvent(this.id.value, this.version + 1);
+    this.apply(event);
+    this.addDomainEvent(event);
   }
 
   public activate(): void {
     if (this.props.isActive) return;
 
-    this.addDomainEvent(
-      new UserActivatedEvent(this.id.value, this.version + 1),
-    );
-
-    this.props.isActive = true;
-    this.props.updatedAt = new Date();
+    const event = new UserActivatedEvent(this.id.value, this.version + 1);
+    this.apply(event);
+    this.addDomainEvent(event);
   }
 
   public changeRole(newRole: UserRole): void {
     if (this.props.role === newRole) return;
 
-    this.addDomainEvent(
-      new UserRoleChangedEvent(
-        this.id.value,
-        this.props.role,
-        newRole,
-        this.version + 1,
-      ),
+    const event = new UserRoleChangedEvent(
+      this.id.value,
+      this.props.role,
+      newRole,
+      this.version + 1,
     );
 
-    this.props.role = newRole;
-    this.props.updatedAt = new Date();
+    this.apply(event);
+    this.addDomainEvent(event);
   }
 
   public delete(): void {
-    this.addDomainEvent(new UserDeletedEvent(this.id.value, this.version + 1));
+    const event = new UserDeletedEvent(this.id.value, this.version + 1);
+    this.apply(event);
+    this.addDomainEvent(event);
   }
 
   // ─── Event Sourcing ───────────────────────────────────────────────────
@@ -266,10 +266,7 @@ export class User extends AggregateRoot<UserProps> {
       case USER_CREATED: {
         const nameResult = UserName.create(payload.firstName, payload.lastName);
         const emailResult = Email.create(payload.email);
-        const result = combine<[UserName, Email], ValidationError>([
-          nameResult,
-          emailResult,
-        ]);
+        const result = combine([nameResult, emailResult]);
 
         if (isErr(result)) return err(result.error);
         const [name, email] = result.value;
@@ -317,8 +314,11 @@ export class User extends AggregateRoot<UserProps> {
         };
         break;
       case USER_DELETED:
-        // No state mutation needed for deletion since the repository handles
-        // hard deletes, and this aggregate will be discarded.
+        this.props = {
+          ...this.props,
+          deletedAt: event.occurredAt,
+          updatedAt: event.occurredAt,
+        };
         break;
       default:
         return err(

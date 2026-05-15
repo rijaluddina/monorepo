@@ -32,7 +32,6 @@ export interface IUserRepository {
     >
   >;
   save(user: User, ctx?: PersistenceContext): Promise<Result<void, AppError>>;
-  update(user: User, ctx?: PersistenceContext): Promise<Result<void, AppError>>;
   delete(id: string, ctx?: PersistenceContext): Promise<Result<void, AppError>>;
   existsByEmail(
     email: string,

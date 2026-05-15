@@ -1,8 +1,26 @@
-import { describe, expect, it } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import {
+  createAppContainer,
+  startOutboxProcessor,
+  stopOutboxProcessor,
+} from "@repo/infrastructure";
 import { createServer } from "./server";
 
+process.env.NODE_ENV = "test";
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 describe("API Integration Tests", () => {
-  const app = createServer();
+  const container = createAppContainer();
+  const app = createServer(container);
+
+  beforeAll(() => {
+    startOutboxProcessor(container, 20); // Fast interval for tests
+  });
+
+  afterAll(() => {
+    stopOutboxProcessor();
+  });
 
   async function createUser(
     overrides: Partial<{
@@ -21,7 +39,7 @@ describe("API Integration Tests", () => {
     };
 
     const response = await app.handle(
-      new Request("http://localhost/api/users", {
+      new Request("http://localhost/api/v1/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
@@ -29,6 +47,7 @@ describe("API Integration Tests", () => {
     );
 
     expect(response.status).toBe(201);
+    await sleep(50); // wait for outbox processor
     return (await response.json()) as {
       id: string;
       firstName: string;
@@ -48,7 +67,7 @@ describe("API Integration Tests", () => {
     });
   });
 
-  describe("POST /api/users", () => {
+  describe("POST /api/v1/users", () => {
     it("should create a new user and return 201", async () => {
       const userData = {
         firstName: "Integration",
@@ -75,7 +94,7 @@ describe("API Integration Tests", () => {
       };
 
       const response = await app.handle(
-        new Request("http://localhost/api/users", {
+        new Request("http://localhost/api/v1/users", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -96,7 +115,7 @@ describe("API Integration Tests", () => {
       };
 
       const response = await app.handle(
-        new Request("http://localhost/api/users", {
+        new Request("http://localhost/api/v1/users", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -109,10 +128,10 @@ describe("API Integration Tests", () => {
     });
   });
 
-  describe("GET /api/users", () => {
+  describe("GET /api/v1/users", () => {
     it("should return a list of users", async () => {
       const response = await app.handle(
-        new Request("http://localhost/api/users"),
+        new Request("http://localhost/api/v1/users"),
       );
       expect(response.status).toBe(200);
       const body = (await response.json()) as {
@@ -128,7 +147,7 @@ describe("API Integration Tests", () => {
     });
   });
 
-  describe("GET /api/users/:id", () => {
+  describe("GET /api/v1/users/:id", () => {
     it("should retrieve a user by ID", async () => {
       const userData = {
         firstName: "Fetch",
@@ -140,7 +159,7 @@ describe("API Integration Tests", () => {
       const createdUser = await createUser(userData);
 
       const response = await app.handle(
-        new Request(`http://localhost/api/users/${createdUser.id}`),
+        new Request(`http://localhost/api/v1/users/${createdUser.id}`),
       );
 
       expect(response.status).toBe(200);
@@ -152,33 +171,41 @@ describe("API Integration Tests", () => {
     it("should return 404 for non-existent user", async () => {
       const response = await app.handle(
         new Request(
-          "http://localhost/api/users/00000000-0000-0000-0000-000000000000",
+          "http://localhost/api/v1/users/00000000-0000-0000-0000-000000000000",
         ),
       );
       expect(response.status).toBe(404);
     });
   });
 
-  describe("PATCH /api/users/:id", () => {
+  describe("PATCH /api/v1/users/:id", () => {
     it("should activate a deactivated user", async () => {
       const createdUser = await createUser();
 
       const deactivateResponse = await app.handle(
-        new Request(`http://localhost/api/users/${createdUser.id}/deactivate`, {
-          method: "PATCH",
-        }),
+        new Request(
+          `http://localhost/api/v1/users/${createdUser.id}/deactivate`,
+          {
+            method: "PATCH",
+          },
+        ),
       );
       expect(deactivateResponse.status).toBe(204);
+      await sleep(50);
 
       const activateResponse = await app.handle(
-        new Request(`http://localhost/api/users/${createdUser.id}/activate`, {
-          method: "PATCH",
-        }),
+        new Request(
+          `http://localhost/api/v1/users/${createdUser.id}/activate`,
+          {
+            method: "PATCH",
+          },
+        ),
       );
       expect(activateResponse.status).toBe(204);
+      await sleep(50);
 
       const getResponse = await app.handle(
-        new Request(`http://localhost/api/users/${createdUser.id}`),
+        new Request(`http://localhost/api/v1/users/${createdUser.id}`),
       );
       const body = (await getResponse.json()) as { isActive: boolean };
       expect(body.isActive).toBe(true);
@@ -188,15 +215,19 @@ describe("API Integration Tests", () => {
       const createdUser = await createUser();
 
       const response = await app.handle(
-        new Request(`http://localhost/api/users/${createdUser.id}/deactivate`, {
-          method: "PATCH",
-        }),
+        new Request(
+          `http://localhost/api/v1/users/${createdUser.id}/deactivate`,
+          {
+            method: "PATCH",
+          },
+        ),
       );
 
       expect(response.status).toBe(204);
+      await sleep(50);
 
       const getResponse = await app.handle(
-        new Request(`http://localhost/api/users/${createdUser.id}`),
+        new Request(`http://localhost/api/v1/users/${createdUser.id}`),
       );
       const body = (await getResponse.json()) as { isActive: boolean };
       expect(body.isActive).toBe(false);
@@ -207,7 +238,7 @@ describe("API Integration Tests", () => {
       const newEmail = `changed-${Date.now()}-${crypto.randomUUID()}@example.com`;
 
       const response = await app.handle(
-        new Request(`http://localhost/api/users/${createdUser.id}/email`, {
+        new Request(`http://localhost/api/v1/users/${createdUser.id}/email`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: newEmail }),
@@ -215,9 +246,10 @@ describe("API Integration Tests", () => {
       );
 
       expect(response.status).toBe(204);
+      await sleep(50);
 
       const getResponse = await app.handle(
-        new Request(`http://localhost/api/users/${createdUser.id}`),
+        new Request(`http://localhost/api/v1/users/${createdUser.id}`),
       );
       const body = (await getResponse.json()) as { email: string };
       expect(body.email).toBe(newEmail);
@@ -228,7 +260,7 @@ describe("API Integration Tests", () => {
       const createdUser = await createUser({ role: "member" });
 
       const response = await app.handle(
-        new Request(`http://localhost/api/users/${createdUser.id}/role`, {
+        new Request(`http://localhost/api/v1/users/${createdUser.id}/role`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ role: "admin" }),
@@ -236,9 +268,10 @@ describe("API Integration Tests", () => {
       );
 
       expect(response.status).toBe(204);
+      await sleep(50);
 
       const getResponse = await app.handle(
-        new Request(`http://localhost/api/users/${createdUser.id}`),
+        new Request(`http://localhost/api/v1/users/${createdUser.id}`),
       );
       const body = (await getResponse.json()) as { role: string };
       expect(body.role).toBe("admin");
@@ -249,7 +282,7 @@ describe("API Integration Tests", () => {
       const targetUser = await createUser();
 
       const response = await app.handle(
-        new Request(`http://localhost/api/users/${targetUser.id}/email`, {
+        new Request(`http://localhost/api/v1/users/${targetUser.id}/email`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: existingUser.email }),
@@ -262,7 +295,7 @@ describe("API Integration Tests", () => {
     it("should return 404 when activating a non-existent user", async () => {
       const response = await app.handle(
         new Request(
-          "http://localhost/api/users/00000000-0000-0000-0000-000000000000/activate",
+          "http://localhost/api/v1/users/00000000-0000-0000-0000-000000000000/activate",
           { method: "PATCH" },
         ),
       );
@@ -271,7 +304,7 @@ describe("API Integration Tests", () => {
     });
   });
 
-  describe("DELETE /api/users/:id", () => {
+  describe("DELETE /api/v1/users/:id", () => {
     it("should delete a user and make it unavailable via GET", async () => {
       const createdUser = await createUser({
         firstName: "Delete",
@@ -281,14 +314,15 @@ describe("API Integration Tests", () => {
       });
 
       const deleteResponse = await app.handle(
-        new Request(`http://localhost/api/users/${createdUser.id}`, {
+        new Request(`http://localhost/api/v1/users/${createdUser.id}`, {
           method: "DELETE",
         }),
       );
       expect(deleteResponse.status).toBe(204);
+      await sleep(50);
 
       const getResponse = await app.handle(
-        new Request(`http://localhost/api/users/${createdUser.id}`),
+        new Request(`http://localhost/api/v1/users/${createdUser.id}`),
       );
       expect(getResponse.status).toBe(404);
     });

@@ -111,16 +111,20 @@ export function isErr<T, E extends Error>(
  * Combine multiple results into a single result.
  * If any result is an Err, the first Err is returned.
  * Otherwise, an Ok with an array of values is returned.
+ * Supports tuple types for better type inference.
  */
-export function combine<T extends unknown[], E extends Error = Error>(
-  results: { [K in keyof T]: Result<T[K], E> },
-): Result<T, E> {
-  const values = [] as unknown as T;
+export function combine<T extends readonly Result<any, any>[]>(
+  results: [...T],
+): Result<
+  { [K in keyof T]: T[K] extends Result<infer V, any> ? V : never },
+  T[number] extends Result<any, infer E> ? E : never
+> {
+  const values = [] as any[];
   for (const result of results) {
     if (isErr(result)) {
-      return err<T, E>(result.error);
+      return err(result.error) as any;
     }
     values.push(result.value);
   }
-  return ok(values);
+  return ok(values) as any;
 }

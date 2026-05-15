@@ -1,9 +1,18 @@
-import { pool } from "@repo/infrastructure";
+import {
+  createAppContainer,
+  pool,
+  startOutboxProcessor,
+  stopOutboxProcessor,
+} from "@repo/infrastructure";
 import { createServer } from "./server.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
 
-const app = createServer();
+const container = createAppContainer();
+const app = createServer(container);
+
+// 🚀 Start background workers
+startOutboxProcessor(container, Number(process.env.OUTBOX_INTERVAL ?? 5000));
 
 app.listen(PORT, () => {
   console.log(`
@@ -22,6 +31,7 @@ app.listen(PORT, () => {
 
 const shutdown = async (signal: string) => {
   console.log(`\nReceived ${signal}. Shutting down gracefully...`);
+  stopOutboxProcessor();
   await pool.end();
   console.log("Database pool closed. Exiting.");
   process.exit(0);

@@ -6,7 +6,10 @@ export type { QueryHandler } from "./shared/query-handler.ts";
 export type { ICommandBus } from "./shared/command-bus.port.ts";
 export type { IQueryBus } from "./shared/query-bus.port.ts";
 export type { IEventBus } from "./shared/event-bus.port.ts";
+export type { IExternalEventBus } from "./shared/external-event-bus.port.ts";
 export type { IEventStore } from "./shared/event-store.port.ts";
+export type { IOutboxPort } from "./shared/ports/outbox.port.ts";
+
 export type { IUnitOfWork } from "./shared/unit-of-work.port.ts";
 
 // User — ports

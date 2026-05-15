@@ -20,11 +20,12 @@
     "db:seed": "bun run src/database/seed.ts"
   },
   "dependencies": {
-    "drizzle-orm": "^0.38.0",
-    "pg": "^8.20.0",
     "@repo/application": "*",
     "@repo/domain": "*",
-    "@repo/shared": "*"
+    "@repo/shared": "*",
+    "drizzle-orm": "^0.38.0",
+    "ioredis": "^5.10.1",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "drizzle-kit": "^0.30.0",

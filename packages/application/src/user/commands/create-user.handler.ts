@@ -4,6 +4,7 @@ import type { Result } from "@repo/shared";
 import type { CommandHandler } from "../../shared/command-handler.ts";
 import type { IEventBus } from "../../shared/event-bus.port.ts";
 import type { IEventStore } from "../../shared/event-store.port.ts";
+import type { IOutboxPort } from "../../shared/ports/outbox.port.ts";
 import type { IUnitOfWork } from "../../shared/unit-of-work.port.ts";
 import type { UserDTO } from "../dto/user.dto.ts";
 import type { IUserRepository } from "../ports/user-repository.port.ts";
@@ -28,6 +29,7 @@ export class CreateUserCommandHandler
     private readonly userRepository: IUserRepository,
     private readonly eventStore: IEventStore,
     private readonly eventBus: IEventBus,
+    private readonly outboxPort: IOutboxPort,
     private readonly unitOfWork: IUnitOfWork,
   ) {}
 
@@ -58,7 +60,7 @@ export class CreateUserCommandHandler
 
     // ─── Transactional Boundary ──────────────────────────────────────────
     const transactionResult = await this.unitOfWork.run(async (ctx) => {
-      // 3. Persist to DB (write model)
+      // 3. Persist current state to Read Model (Synchronous Projection)
       const saveResult = await this.userRepository.save(user, ctx);
       if (isErr(saveResult)) return err(saveResult.error);
 
@@ -70,17 +72,15 @@ export class CreateUserCommandHandler
       );
       if (isErr(appendResult)) return err(appendResult.error);
 
+      // 5. Add to outbox for reliable publishing
+      const outboxResult = await this.outboxPort.insert(user.domainEvents, ctx);
+      if (isErr(outboxResult)) return err(outboxResult.error);
+
       return ok(undefined);
     });
 
     if (isErr(transactionResult)) {
       return err(transactionResult.error);
-    }
-
-    // 5. Publish events to bus (async event-driven reactions)
-    const publishResult = await this.eventBus.publishAll(user.domainEvents);
-    if (isErr(publishResult)) {
-      return err(publishResult.error);
     }
 
     // 6. Clear events from aggregate memory

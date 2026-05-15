@@ -98,7 +98,7 @@ POST /api/users
 
 ## Environment
 
-Copy `.env.example` to `.env`. Keys: `DATABASE_URL`, `VITE_API_URL`.
+Copy `.env.example` to `.env`. Keys: `DATABASE_URL`, `REDIS_URL`, `VITE_API_URL`.
 
 ## Notes
 

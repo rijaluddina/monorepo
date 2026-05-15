@@ -34,6 +34,7 @@ export const users = pgTable(
       .defaultNow()
       // Drizzle ORM-side hook only; direct SQL clients bypass this.
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at", { precision: 3, mode: "date" }),
   },
   (table) => [uniqueIndex("users_email_key").on(table.email)],
 );

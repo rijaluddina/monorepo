@@ -9,5 +9,7 @@ generated
 
 # local worktrees
 .worktrees/
-docs/superpowers
 .worktrees/
+*.log
+*.*.log
+.playwright-mcp

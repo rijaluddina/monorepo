@@ -6,4 +6,10 @@ export { DrizzleEventStore } from "./event-store/drizzle-event-store.ts";
 export { InMemoryCommandBus } from "./bus/in-memory-command-bus.ts";
 export { InMemoryQueryBus } from "./bus/in-memory-query-bus.ts";
 export { InMemoryEventBus } from "./bus/in-memory-event-bus.ts";
-export { AppContainer } from "./container/app-container.ts";
+export { RedisEventBus } from "./bus/redis-event-bus.ts";
+export { ConsoleExternalEventBus } from "./bus/console-external-event-bus.ts";
+export {
+  AppContainer,
+  createAppContainer,
+} from "./container/app-container.ts";
+export * from "./outbox/processor.ts";

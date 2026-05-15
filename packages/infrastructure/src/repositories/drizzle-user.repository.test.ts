@@ -21,9 +21,11 @@ function throwingUserDb() {
       },
     },
     select: () => ({
-      from: async () => {
-        throw dbFailure;
-      },
+      from: () => ({
+        where: async () => {
+          throw dbFailure;
+        },
+      }),
     }),
     insert: () => ({
       values: async () => {
@@ -45,6 +47,17 @@ function throwingUserDb() {
   };
 }
 
+function throwingEventStore() {
+  return {
+    getEvents: async () => {
+      throw dbFailure;
+    },
+    append: async () => {
+      throw dbFailure;
+    },
+  };
+}
+
 function emptyMessageUserDb() {
   return {
     query: {
@@ -53,6 +66,14 @@ function emptyMessageUserDb() {
           throw emptyMessageDbFailure;
         },
       },
+    },
+  };
+}
+
+function emptyMessageEventStore() {
+  return {
+    getEvents: async () => {
+      throw emptyMessageDbFailure;
     },
   };
 }
@@ -81,7 +102,7 @@ describe("DrizzleUserRepository", () => {
   it("should return an error when findById database access fails", async () => {
     const repository = new DrizzleUserRepository(
       throwingUserDb() as never,
-      {} as never,
+      throwingEventStore() as never,
     );
 
     const result = await repository.findById("user-1");
@@ -92,7 +113,7 @@ describe("DrizzleUserRepository", () => {
   it("should use a fallback message for database errors without a message", async () => {
     const repository = new DrizzleUserRepository(
       emptyMessageUserDb() as never,
-      {} as never,
+      emptyMessageEventStore() as never,
     );
 
     const result = await repository.findById("user-1");
@@ -106,7 +127,7 @@ describe("DrizzleUserRepository", () => {
   it("should return an error when findByEmail database access fails", async () => {
     const repository = new DrizzleUserRepository(
       throwingUserDb() as never,
-      {} as never,
+      throwingEventStore() as never,
     );
 
     const result = await repository.findByEmail("ada@example.com");
@@ -117,7 +138,7 @@ describe("DrizzleUserRepository", () => {
   it("should return an error when findAll database access fails", async () => {
     const repository = new DrizzleUserRepository(
       throwingUserDb() as never,
-      {} as never,
+      throwingEventStore() as never,
     );
 
     const result = await repository.findAll();
@@ -128,7 +149,7 @@ describe("DrizzleUserRepository", () => {
   it("should return an error when save database access fails", async () => {
     const repository = new DrizzleUserRepository(
       throwingUserDb() as never,
-      {} as never,
+      throwingEventStore() as never,
     );
 
     const result = await repository.save(createUser());
@@ -139,10 +160,10 @@ describe("DrizzleUserRepository", () => {
   it("should return an error when update database access fails", async () => {
     const repository = new DrizzleUserRepository(
       throwingUserDb() as never,
-      {} as never,
+      throwingEventStore() as never,
     );
 
-    const result = await repository.update(createUser());
+    const result = await repository.save(createUser());
 
     expectInfrastructureError(result);
   });
@@ -150,7 +171,7 @@ describe("DrizzleUserRepository", () => {
   it("should return an error when delete database access fails", async () => {
     const repository = new DrizzleUserRepository(
       throwingUserDb() as never,
-      {} as never,
+      throwingEventStore() as never,
     );
 
     const result = await repository.delete("user-1");
@@ -161,7 +182,7 @@ describe("DrizzleUserRepository", () => {
   it("should return an error when existsByEmail database access fails", async () => {
     const repository = new DrizzleUserRepository(
       throwingUserDb() as never,
-      {} as never,
+      throwingEventStore() as never,
     );
 
     const result = await repository.existsByEmail("ada@example.com");

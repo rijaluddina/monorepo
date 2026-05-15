@@ -8,9 +8,10 @@ import {
   type Result,
   combine,
   err,
+  isErr,
   ok,
 } from "@repo/shared";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 import type { DrizzleDB } from "../database/drizzle.client.ts";
 import { fromPersistenceContext } from "../database/persistence-context.ts";
 import { users } from "../database/schema.ts";
@@ -63,7 +64,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const db = this.getDb(ctx);
     try {
       const record = await db.query.users.findFirst({
-        where: eq(users.email, email),
+        where: and(eq(users.email, email), isNull(users.deletedAt)),
       });
       if (!record) return ok(undefined);
 
@@ -91,11 +92,15 @@ export class DrizzleUserRepository implements IUserRepository {
     try {
       const [records, totalResult] = await Promise.all([
         db.query.users.findMany({
+          where: isNull(users.deletedAt),
           limit,
           offset,
-          orderBy: (users, { desc }) => [desc(users.createdAt)],
+          orderBy: (fields, { desc }) => [desc(fields.createdAt)],
         }),
-        db.select({ value: count() }).from(users),
+        db
+          .select({ value: count() })
+          .from(users)
+          .where(isNull(users.deletedAt)),
       ]);
 
       const total = Number(totalResult[0]?.value ?? 0);
@@ -122,29 +127,25 @@ export class DrizzleUserRepository implements IUserRepository {
   ): Promise<Result<void, AppError>> {
     const db = this.getDb(ctx);
     try {
-      await db.insert(users).values({
-        id: user.id.value,
-        firstName: user.name.firstName,
-        lastName: user.name.lastName,
-        email: user.email.value,
-        role: user.role.toUpperCase() as "ADMIN" | "MEMBER" | "VIEWER",
-        isActive: user.isActive,
-        version: user.version,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      });
-      return ok();
-    } catch (error) {
-      return err(this.toInfrastructureError(error));
-    }
-  }
+      // For Event Sourcing hybrid:
+      // If version is 1, it's a new aggregate -> INSERT
+      // If version > 1, it's an update -> UPDATE with optimistic locking
+      if (user.version === 1) {
+        await db.insert(users).values({
+          id: user.id.value,
+          firstName: user.name.firstName,
+          lastName: user.name.lastName,
+          email: user.email.value,
+          role: user.role.toUpperCase() as "ADMIN" | "MEMBER" | "VIEWER",
+          isActive: user.isActive,
+          version: user.version,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          deletedAt: user.deletedAt,
+        });
+        return ok();
+      }
 
-  async update(
-    user: User,
-    ctx?: PersistenceContext,
-  ): Promise<Result<void, AppError>> {
-    const db = this.getDb(ctx);
-    try {
       const result = await db
         .update(users)
         .set({
@@ -155,6 +156,7 @@ export class DrizzleUserRepository implements IUserRepository {
           isActive: user.isActive,
           version: user.version,
           updatedAt: user.updatedAt,
+          deletedAt: user.deletedAt,
         })
         .where(
           and(eq(users.id, user.id.value), eq(users.version, user.version - 1)),
@@ -163,7 +165,7 @@ export class DrizzleUserRepository implements IUserRepository {
       if (result.rowCount === 0) {
         return err(
           new ConflictError(
-            "Concurrency conflict: user was modified by another process",
+            `Concurrency conflict: user "${user.id.value}" was modified by another process`,
           ),
         );
       }
@@ -177,10 +179,15 @@ export class DrizzleUserRepository implements IUserRepository {
     id: string,
     ctx?: PersistenceContext,
   ): Promise<Result<void, AppError>> {
-    const db = this.getDb(ctx);
     try {
-      await db.delete(users).where(eq(users.id, id));
-      return ok();
+      const userResult = await this.findById(id, ctx);
+      if (isErr(userResult)) return err(userResult.error);
+
+      const user = userResult.value;
+      if (!user) return ok();
+
+      user.delete();
+      return this.save(user, ctx);
     } catch (error) {
       return err(this.toInfrastructureError(error));
     }
@@ -193,7 +200,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const db = this.getDb(ctx);
     try {
       const record = await db.query.users.findFirst({
-        where: eq(users.email, email),
+        where: and(eq(users.email, email), isNull(users.deletedAt)),
         columns: { id: true },
       });
       return ok(record !== undefined);
@@ -206,10 +213,7 @@ export class DrizzleUserRepository implements IUserRepository {
     const nameResult = UserName.create(record.firstName, record.lastName);
     const emailResult = Email.create(record.email);
 
-    const result = combine<[UserName, Email], AppError>([
-      nameResult as Result<UserName, AppError>,
-      emailResult as Result<Email, AppError>,
-    ]);
+    const result = combine([nameResult, emailResult]);
     if (result.isErr()) return err(result.error);
 
     const [name, email] = result.value;

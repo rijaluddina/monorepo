@@ -2,6 +2,7 @@ import { type Mock, beforeEach, describe, expect, mock, test } from "bun:test";
 import { ConflictError, ValidationError, err, ok } from "@repo/shared";
 import type { IEventBus } from "../../shared/event-bus.port.ts";
 import type { IEventStore } from "../../shared/event-store.port.ts";
+import type { IOutboxPort } from "../../shared/ports/outbox.port.ts";
 import type { IUnitOfWork } from "../../shared/unit-of-work.port.ts";
 import type { IUserRepository } from "../ports/user-repository.port.ts";
 import { CreateUserCommand } from "./create-user.command.ts";
@@ -11,6 +12,7 @@ describe("CreateUserCommandHandler", () => {
   let userRepository: IUserRepository;
   let eventStore: IEventStore;
   let eventBus: IEventBus;
+  let outboxPort: IOutboxPort;
   let unitOfWork: IUnitOfWork;
   let handler: CreateUserCommandHandler;
 
@@ -27,12 +29,18 @@ describe("CreateUserCommandHandler", () => {
 
     eventStore = {
       append: mock(),
+      getEvents: mock(),
+      getEventsByType: mock(),
     } as unknown as IEventStore;
 
     eventBus = {
       publish: mock(),
       publishAll: mock(),
     } as unknown as IEventBus;
+
+    outboxPort = {
+      insert: mock(),
+    } as unknown as IOutboxPort;
 
     unitOfWork = {
       run: mock((work) => work({})),
@@ -42,6 +50,7 @@ describe("CreateUserCommandHandler", () => {
       userRepository,
       eventStore,
       eventBus,
+      outboxPort,
       unitOfWork,
     );
   });
@@ -64,6 +73,9 @@ describe("CreateUserCommandHandler", () => {
     (eventStore.append as Mock<typeof eventStore.append>).mockResolvedValue(
       ok(undefined),
     );
+    (outboxPort.insert as Mock<typeof outboxPort.insert>).mockResolvedValue(
+      ok(undefined),
+    );
     (eventBus.publishAll as Mock<typeof eventBus.publishAll>).mockResolvedValue(
       ok(undefined),
     );
@@ -79,9 +91,9 @@ describe("CreateUserCommandHandler", () => {
     }
 
     expect(userRepository.existsByEmail).toHaveBeenCalledWith(command.email);
-    expect(userRepository.save).toHaveBeenCalled();
+    expect(userRepository.save).not.toHaveBeenCalled();
     expect(eventStore.append).toHaveBeenCalled();
-    expect(eventBus.publishAll).toHaveBeenCalled();
+    expect(outboxPort.insert).toHaveBeenCalled();
   });
 
   test("should fail if email already exists", async () => {

@@ -1,8 +1,9 @@
-import type { User } from "@repo/domain";
+import { UniqueId, User } from "@repo/domain";
 import { NotFoundError, err, isErr, ok } from "@repo/shared";
 import type { AppError, Result } from "@repo/shared";
 import type { IEventBus } from "../../shared/event-bus.port.ts";
 import type { IEventStore } from "../../shared/event-store.port.ts";
+import type { IOutboxPort } from "../../shared/ports/outbox.port.ts";
 import type { IUnitOfWork } from "../../shared/unit-of-work.port.ts";
 import type { IUserRepository } from "../ports/user-repository.port.ts";
 
@@ -13,6 +14,7 @@ export abstract class UserMutationHandler {
     protected readonly userRepository: IUserRepository,
     protected readonly eventStore: IEventStore,
     protected readonly eventBus: IEventBus,
+    protected readonly outboxPort: IOutboxPort,
     protected readonly unitOfWork: IUnitOfWork,
   ) {}
 
@@ -27,13 +29,16 @@ export abstract class UserMutationHandler {
   }
 
   protected async findUser(userId: string): Promise<Result<User>> {
-    const userResult = await this.userRepository.findById(userId);
+    const eventsResult = await this.eventStore.getEvents(userId);
+    if (isErr(eventsResult)) return err(eventsResult.error);
+
+    const events = eventsResult.value;
+    if (events.length === 0) return err(new NotFoundError("User", userId));
+
+    const userResult = User.fromEvents(events, new UniqueId(userId));
     if (isErr(userResult)) return err(userResult.error);
 
-    const user = userResult.value;
-    if (!user) return err(new NotFoundError("User", userId));
-
-    return ok(user);
+    return ok(userResult.value);
   }
 
   protected async commitMutation(
@@ -46,9 +51,11 @@ export abstract class UserMutationHandler {
     }
 
     const transactionResult = await this.unitOfWork.run(async (ctx) => {
-      const saveResult = await this.userRepository.update(user, ctx);
+      // 1. Persist current state to Read Model (Synchronous Projection)
+      const saveResult = await this.userRepository.save(user, ctx);
       if (isErr(saveResult)) return err(saveResult.error);
 
+      // 2. Append events to event store (Event Sourcing)
       const appendResult = await this.eventStore.append(
         user.id.value,
         user.domainEvents,
@@ -56,13 +63,14 @@ export abstract class UserMutationHandler {
       );
       if (isErr(appendResult)) return err(appendResult.error);
 
+      // 3. Add to outbox for reliable publishing to external systems
+      const outboxResult = await this.outboxPort.insert(user.domainEvents, ctx);
+      if (isErr(outboxResult)) return err(outboxResult.error);
+
       return ok(undefined);
     });
 
     if (isErr(transactionResult)) return err(transactionResult.error);
-
-    const publishResult = await this.eventBus.publishAll(user.domainEvents);
-    if (isErr(publishResult)) return err(publishResult.error);
 
     user.clearEvents();
 

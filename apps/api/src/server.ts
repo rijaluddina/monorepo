@@ -1,67 +1,9 @@
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
-import {
-  ActivateUserCommand,
-  ChangeUserEmailCommand,
-  ChangeUserRoleCommand,
-  CreateUserCommand,
-  DeactivateUserCommand,
-  DeleteUserCommand,
-  GetUserByIdQuery,
-  GetUsersQuery,
-  type UserDTO,
-} from "@repo/application";
-import { AppContainer } from "@repo/infrastructure";
-import type { PaginatedResult } from "@repo/shared";
-import { Elysia, t } from "elysia";
-
-const UserSchema = t.Object(
-  {
-    id: t.String(),
-    firstName: t.String(),
-    lastName: t.String(),
-    fullName: t.String(),
-    email: t.String({ format: "email" }),
-    role: t.Union([
-      t.Literal("admin"),
-      t.Literal("member"),
-      t.Literal("viewer"),
-    ]),
-    isActive: t.Boolean(),
-    createdAt: t.String({ format: "date-time" }),
-    updatedAt: t.String({ format: "date-time" }),
-  },
-  { description: "User data" },
-);
-
-const PaginatedUserResponse = t.Object(
-  {
-    data: t.Array(UserSchema),
-    total: t.Number(),
-    page: t.Number(),
-    limit: t.Number(),
-    totalPages: t.Number(),
-  },
-  { description: "Paginated user list response" },
-);
-
-const ErrorSchema = t.Object({
-  error: t.Object({
-    code: t.String(),
-    message: t.String(),
-  }),
-});
-
-const ValidationErrorSchema = t.Object({
-  type: t.Optional(t.String()),
-  on: t.Optional(t.String()),
-  summary: t.Optional(t.String()),
-  property: t.Optional(t.String()),
-  message: t.String(),
-  expected: t.Optional(t.Unknown()),
-  found: t.Optional(t.Unknown()),
-  errors: t.Optional(t.Array(t.Unknown())),
-});
+import type { AppContainer } from "@repo/infrastructure";
+import { Elysia } from "elysia";
+import { healthRoutes } from "./routes/health.routes";
+import { userRoutes } from "./routes/user.routes";
 
 /**
  * createServer — builds and returns the Elysia app instance.
@@ -69,14 +11,16 @@ const ValidationErrorSchema = t.Object({
  * Presentation layer only: maps HTTP ↔ CQRS bus.
  * No business logic lives here — everything delegated via buses.
  */
-export function createServer() {
-  const container = AppContainer.getInstance();
-
+export function createServer(container: AppContainer) {
   const app = new Elysia()
     // ── Global plugins ──────────────────────────────────────────────────
     .use(
       cors({
-        origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
+        origin: [
+          "http://localhost:5173",
+          "http://localhost:5174",
+          "http://localhost:5175",
+        ],
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       }),
     )
@@ -94,337 +38,28 @@ export function createServer() {
       }),
     )
 
-    // ── Health ──────────────────────────────────────────────────────────
-    .get(
-      "/health",
-      () => ({ status: "ok", timestamp: new Date().toISOString() }),
-      {
-        detail: { tags: ["Health"], summary: "Health check" },
-      },
-    )
-
-    // ── API ─────────────────────────────────────────────────────────────
-    .group("/api", (app) =>
-      app.group("/users", (app) =>
-        app
-          // GET /api/users
-          .get(
-            "/",
-            async ({ query, set }) => {
-              const result = await container.queryBus.ask<
-                GetUsersQuery,
-                PaginatedResult<UserDTO>
-              >(new GetUsersQuery(Number(query.page), Number(query.limit)));
-
-              if (result.isErr()) {
-                set.status = result.error.statusCode ?? 500;
-                return {
-                  error: {
-                    code: result.error.code,
-                    message: result.error.message,
-                  },
-                };
-              }
-
-              return result.value;
-            },
-            {
-              query: t.Object({
-                page: t.Optional(t.Numeric({ default: 1 })),
-                limit: t.Optional(t.Numeric({ default: 20 })),
-              }),
-              response: {
-                200: PaginatedUserResponse,
-                400: ErrorSchema,
-                404: ErrorSchema,
-                409: ErrorSchema,
-                500: ErrorSchema,
-              },
-              detail: {
-                tags: ["Users"],
-                summary: "List all users (paginated)",
-              },
-            },
-          )
-
-          // POST /api/users
-          .post(
-            "/",
-            async ({ body, set }) => {
-              const result = await container.commandBus.dispatch<
-                CreateUserCommand,
-                UserDTO
-              >(
-                new CreateUserCommand(
-                  body.firstName,
-                  body.lastName,
-                  body.email,
-                  body.role,
-                ),
-              );
-
-              if (result.isErr()) {
-                set.status = result.error.statusCode ?? 500;
-                return {
-                  error: {
-                    code: result.error.code,
-                    message: result.error.message,
-                  },
-                };
-              }
-
-              set.status = 201;
-              return result.value;
-            },
-            {
-              body: t.Object({
-                firstName: t.String({ minLength: 1 }),
-                lastName: t.String({ minLength: 1 }),
-                email: t.String({ format: "email" }),
-                role: t.Optional(
-                  t.Union([
-                    t.Literal("admin"),
-                    t.Literal("member"),
-                    t.Literal("viewer"),
-                  ]),
-                ),
-              }),
-              response: {
-                201: UserSchema,
-                400: ErrorSchema,
-                404: ErrorSchema,
-                409: ErrorSchema,
-                422: ValidationErrorSchema,
-                500: ErrorSchema,
-              },
-              detail: { tags: ["Users"], summary: "Create a new user" },
-            },
-          )
-
-          // GET /api/users/:id
-          .get(
-            "/:id",
-            async ({ params, set }) => {
-              const result = await container.queryBus.ask<
-                GetUserByIdQuery,
-                UserDTO
-              >(new GetUserByIdQuery(params.id));
-
-              if (result.isErr()) {
-                set.status = result.error.statusCode ?? 500;
-                return {
-                  error: {
-                    code: result.error.code,
-                    message: result.error.message,
-                  },
-                };
-              }
-
-              return result.value;
-            },
-            {
-              params: t.Object({ id: t.String() }),
-              response: {
-                200: UserSchema,
-                400: ErrorSchema,
-                404: ErrorSchema,
-                409: ErrorSchema,
-                500: ErrorSchema,
-              },
-              detail: { tags: ["Users"], summary: "Get user by ID" },
-            },
-          )
-
-          // PATCH /api/users/:id/activate
-          .patch(
-            "/:id/activate",
-            async ({ params, set }) => {
-              const result = await container.commandBus.dispatch<
-                ActivateUserCommand,
-                void
-              >(new ActivateUserCommand(params.id));
-
-              if (result.isErr()) {
-                set.status = result.error.statusCode ?? 500;
-                return {
-                  error: {
-                    code: result.error.code,
-                    message: result.error.message,
-                  },
-                };
-              }
-
-              set.status = 204;
-              return;
-            },
-            {
-              params: t.Object({ id: t.String() }),
-              response: {
-                204: t.Void(),
-                400: ErrorSchema,
-                404: ErrorSchema,
-                500: ErrorSchema,
-              },
-              detail: { tags: ["Users"], summary: "Activate a user" },
-            },
-          )
-
-          // PATCH /api/users/:id/deactivate
-          .patch(
-            "/:id/deactivate",
-            async ({ params, set }) => {
-              const result = await container.commandBus.dispatch<
-                DeactivateUserCommand,
-                void
-              >(new DeactivateUserCommand(params.id));
-
-              if (result.isErr()) {
-                set.status = result.error.statusCode ?? 500;
-                return {
-                  error: {
-                    code: result.error.code,
-                    message: result.error.message,
-                  },
-                };
-              }
-
-              set.status = 204;
-              return;
-            },
-            {
-              params: t.Object({ id: t.String() }),
-              response: {
-                204: t.Void(),
-                400: ErrorSchema,
-                404: ErrorSchema,
-                500: ErrorSchema,
-              },
-              detail: { tags: ["Users"], summary: "Deactivate a user" },
-            },
-          )
-
-          // PATCH /api/users/:id/email
-          .patch(
-            "/:id/email",
-            async ({ params, body, set }) => {
-              const result = await container.commandBus.dispatch<
-                ChangeUserEmailCommand,
-                void
-              >(new ChangeUserEmailCommand(params.id, body.email));
-
-              if (result.isErr()) {
-                set.status = result.error.statusCode ?? 500;
-                return {
-                  error: {
-                    code: result.error.code,
-                    message: result.error.message,
-                  },
-                };
-              }
-
-              set.status = 204;
-              return;
-            },
-            {
-              params: t.Object({ id: t.String() }),
-              body: t.Object({ email: t.String({ format: "email" }) }),
-              response: {
-                204: t.Void(),
-                400: ErrorSchema,
-                404: ErrorSchema,
-                409: ErrorSchema,
-                500: ErrorSchema,
-              },
-              detail: { tags: ["Users"], summary: "Change user email" },
-            },
-          )
-
-          // PATCH /api/users/:id/role
-          .patch(
-            "/:id/role",
-            async ({ params, body, set }) => {
-              const result = await container.commandBus.dispatch<
-                ChangeUserRoleCommand,
-                void
-              >(new ChangeUserRoleCommand(params.id, body.role));
-
-              if (result.isErr()) {
-                set.status = result.error.statusCode ?? 500;
-                return {
-                  error: {
-                    code: result.error.code,
-                    message: result.error.message,
-                  },
-                };
-              }
-
-              set.status = 204;
-              return;
-            },
-            {
-              params: t.Object({ id: t.String() }),
-              body: t.Object({
-                role: t.Union([
-                  t.Literal("admin"),
-                  t.Literal("member"),
-                  t.Literal("viewer"),
-                ]),
-              }),
-              response: {
-                204: t.Void(),
-                400: ErrorSchema,
-                404: ErrorSchema,
-                500: ErrorSchema,
-              },
-              detail: { tags: ["Users"], summary: "Change user role" },
-            },
-          )
-
-          // DELETE /api/users/:id
-          .delete(
-            "/:id",
-            async ({ params, set }) => {
-              const result = await container.commandBus.dispatch<
-                DeleteUserCommand,
-                void
-              >(new DeleteUserCommand(params.id));
-
-              if (result.isErr()) {
-                set.status = result.error.statusCode ?? 500;
-                return {
-                  error: {
-                    code: result.error.code,
-                    message: result.error.message,
-                  },
-                };
-              }
-
-              set.status = 204;
-              return;
-            },
-            {
-              params: t.Object({ id: t.String() }),
-              response: {
-                204: t.Void(),
-                400: ErrorSchema,
-                404: ErrorSchema,
-                409: ErrorSchema,
-                500: ErrorSchema,
-              },
-              detail: { tags: ["Users"], summary: "Delete a user" },
-            },
-          ),
-      ),
-    )
+    // ── Routes ──────────────────────────────────────────────────────────
+    .get("/", () => ({
+      message: "Monorepo API is running",
+      documentation: "/docs",
+      health: "/health",
+    }))
+    .get("/favicon.ico", () => {
+      return new Response(null, { status: 204 });
+    })
+    .use(healthRoutes)
+    .group("/api/v1", (app) => app.use(userRoutes(container)))
 
     // ── Global error handler ────────────────────────────────────────────
     .onError(({ error, set }) => {
+      console.error("API Error Captured:", error);
       const appError = error as {
         statusCode?: number;
+        status?: number;
         code?: string;
         message: string;
       };
-      const status = appError.statusCode ?? 500;
+      const status = appError.statusCode ?? appError.status ?? 500;
       set.status = status;
       return {
         error: {

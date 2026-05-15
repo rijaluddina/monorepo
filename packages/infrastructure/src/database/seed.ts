@@ -38,6 +38,7 @@ async function seed() {
       role: u.role.toLowerCase() as "admin" | "member" | "viewer",
     }).unwrap();
 
+    // 1. Insert into Read Model
     await db.insert(userTable).values({
       id: user.id.value,
       firstName: user.name.firstName,
@@ -47,7 +48,20 @@ async function seed() {
       isActive: user.isActive,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      version: user.version,
     });
+
+    // 2. Insert into Event Store (crucial for reconstitution during mutations)
+    const events = user.domainEvents.map((e) => ({
+      id: crypto.randomUUID(),
+      aggregateId: e.aggregateId,
+      eventType: e.eventType,
+      payload: e,
+      version: e.version,
+      occurredAt: e.occurredAt,
+    }));
+
+    await db.insert(eventStore).values(events);
 
     console.log(`  ✓ Created ${user.name.fullName} (${user.email.value})`);
   }

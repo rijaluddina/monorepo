@@ -58,3 +58,9 @@ export class ForbiddenError extends AppError {
     super(message, "FORBIDDEN", 403);
   }
 }
+
+export class InternalError extends AppError {
+  constructor(message = "Internal Server Error") {
+    super(message, "INTERNAL_ERROR", 500);
+  }
+}
