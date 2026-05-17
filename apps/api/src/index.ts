@@ -31,7 +31,7 @@ app.listen(PORT, () => {
 
 const shutdown = async (signal: string) => {
   console.log(`\nReceived ${signal}. Shutting down gracefully...`);
-  stopOutboxProcessor();
+  await stopOutboxProcessor();
   await pool.end();
   console.log("Database pool closed. Exiting.");
   process.exit(0);

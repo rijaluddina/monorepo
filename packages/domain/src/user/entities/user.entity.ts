@@ -30,6 +30,10 @@ import {
   UserEmailChangedEvent,
 } from "../events/user-email-changed.event.ts";
 import {
+  USER_RESTORED,
+  UserRestoredEvent,
+} from "../events/user-restored.event.ts";
+import {
   USER_ROLE_CHANGED,
   UserRoleChangedEvent,
 } from "../events/user-role-changed.event.ts";
@@ -251,7 +255,15 @@ export class User extends AggregateRoot<UserProps> {
   }
 
   public delete(): void {
+    if (this.props.deletedAt) return;
     const event = new UserDeletedEvent(this.id.value, this.version + 1);
+    this.apply(event);
+    this.addDomainEvent(event);
+  }
+
+  public restore(): void {
+    if (!this.props.deletedAt) return;
+    const event = new UserRestoredEvent(this.id.value, this.version + 1);
     this.apply(event);
     this.addDomainEvent(event);
   }
@@ -317,6 +329,13 @@ export class User extends AggregateRoot<UserProps> {
         this.props = {
           ...this.props,
           deletedAt: event.occurredAt,
+          updatedAt: event.occurredAt,
+        };
+        break;
+      case USER_RESTORED:
+        this.props = {
+          ...this.props,
+          deletedAt: undefined,
           updatedAt: event.occurredAt,
         };
         break;

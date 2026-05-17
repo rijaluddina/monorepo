@@ -14,13 +14,14 @@ export interface IUserRepository {
   findById(
     id: string,
     ctx?: PersistenceContext,
+    options?: { includeDeleted?: boolean },
   ): Promise<Result<Optional<User>, AppError>>;
   findByEmail(
     email: string,
     ctx?: PersistenceContext,
   ): Promise<Result<Optional<User>, AppError>>;
   findAll(
-    params?: { page?: number; limit?: number },
+    params?: { page?: number; limit?: number; search?: string },
     ctx?: PersistenceContext,
   ): Promise<
     Result<

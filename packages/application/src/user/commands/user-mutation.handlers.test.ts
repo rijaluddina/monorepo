@@ -99,29 +99,9 @@ describe("User mutation command handlers", () => {
     user.deactivate();
     user.clearEvents();
     (
-      eventStore.getEvents as Mock<typeof eventStore.getEvents>
-    ).mockResolvedValue(
-      ok([
-        {
-          eventType: USER_CREATED,
-          aggregateId: user.id.value,
-          version: 1,
-          occurredAt: new Date(),
-          firstName: "Ada",
-          lastName: "Lovelace",
-          email: "ada@example.com",
-          role: "member",
-          // biome-ignore lint/suspicious/noExplicitAny: mock event
-        } as any,
-        {
-          eventType: "UserDeactivated",
-          aggregateId: user.id.value,
-          version: 2,
-          occurredAt: new Date(),
-          // biome-ignore lint/suspicious/noExplicitAny: mock event
-        } as any,
-      ]),
-    );
+      userRepository.findById as Mock<typeof userRepository.findById>
+    ).mockResolvedValue(ok(user));
+
     const handler = new ActivateUserCommandHandler(
       userRepository,
       eventStore,
@@ -149,22 +129,8 @@ describe("User mutation command handlers", () => {
   test("change email should reject duplicate email before mutating", async () => {
     const user = createUser();
     (
-      eventStore.getEvents as Mock<typeof eventStore.getEvents>
-    ).mockResolvedValue(
-      ok([
-        {
-          eventType: USER_CREATED,
-          aggregateId: user.id.value,
-          version: 1,
-          occurredAt: new Date(),
-          firstName: "Ada",
-          lastName: "Lovelace",
-          email: "ada@example.com",
-          role: "member",
-          // biome-ignore lint/suspicious/noExplicitAny: mock event
-        } as any,
-      ]),
-    );
+      userRepository.findById as Mock<typeof userRepository.findById>
+    ).mockResolvedValue(ok(user));
     (
       userRepository.existsByEmail as Mock<typeof userRepository.existsByEmail>
     ).mockResolvedValue(ok(true));
@@ -189,22 +155,8 @@ describe("User mutation command handlers", () => {
   test("change email should update and append the email changed event", async () => {
     const user = createUser();
     (
-      eventStore.getEvents as Mock<typeof eventStore.getEvents>
-    ).mockResolvedValue(
-      ok([
-        {
-          eventType: USER_CREATED,
-          aggregateId: user.id.value,
-          version: 1,
-          occurredAt: new Date(),
-          firstName: "Ada",
-          lastName: "Lovelace",
-          email: "ada@example.com",
-          role: "member",
-          // biome-ignore lint/suspicious/noExplicitAny: mock event
-        } as any,
-      ]),
-    );
+      userRepository.findById as Mock<typeof userRepository.findById>
+    ).mockResolvedValue(ok(user));
     (
       userRepository.existsByEmail as Mock<typeof userRepository.existsByEmail>
     ).mockResolvedValue(ok(false));
@@ -232,22 +184,8 @@ describe("User mutation command handlers", () => {
   test("change role should update and append the role changed event", async () => {
     const user = createUser();
     (
-      eventStore.getEvents as Mock<typeof eventStore.getEvents>
-    ).mockResolvedValue(
-      ok([
-        {
-          eventType: USER_CREATED,
-          aggregateId: user.id.value,
-          version: 1,
-          occurredAt: new Date(),
-          firstName: "Ada",
-          lastName: "Lovelace",
-          email: "ada@example.com",
-          role: "member",
-          // biome-ignore lint/suspicious/noExplicitAny: mock event
-        } as any,
-      ]),
-    );
+      userRepository.findById as Mock<typeof userRepository.findById>
+    ).mockResolvedValue(ok(user));
     const handler = new ChangeUserRoleCommandHandler(
       userRepository,
       eventStore,
@@ -271,8 +209,8 @@ describe("User mutation command handlers", () => {
 
   test("mutation handlers should return not found when user is missing", async () => {
     (
-      eventStore.getEvents as Mock<typeof eventStore.getEvents>
-    ).mockResolvedValue(ok([]));
+      userRepository.findById as Mock<typeof userRepository.findById>
+    ).mockResolvedValue(ok(undefined));
     const handler = new ActivateUserCommandHandler(
       userRepository,
       eventStore,
@@ -293,22 +231,8 @@ describe("User mutation command handlers", () => {
     user.deactivate();
     user.clearEvents();
     (
-      eventStore.getEvents as Mock<typeof eventStore.getEvents>
-    ).mockResolvedValue(
-      ok([
-        {
-          eventType: USER_CREATED,
-          aggregateId: user.id.value,
-          version: 1,
-          occurredAt: new Date(),
-          firstName: "Ada",
-          lastName: "Lovelace",
-          email: "ada@example.com",
-          role: "member",
-          // biome-ignore lint/suspicious/noExplicitAny: mock event
-        } as any,
-      ]),
-    );
+      userRepository.findById as Mock<typeof userRepository.findById>
+    ).mockResolvedValue(ok(user));
     (eventStore.append as Mock<typeof eventStore.append>).mockResolvedValue(
       err(new AppError("append failed", "APPEND_FAILED")),
     );
@@ -329,22 +253,8 @@ describe("User mutation command handlers", () => {
   test("delete should append and publish UserDeletedEvent", async () => {
     const user = createUser();
     (
-      eventStore.getEvents as Mock<typeof eventStore.getEvents>
-    ).mockResolvedValue(
-      ok([
-        {
-          eventType: USER_CREATED,
-          aggregateId: user.id.value,
-          version: 1,
-          occurredAt: new Date(),
-          firstName: "Ada",
-          lastName: "Lovelace",
-          email: "ada@example.com",
-          role: "member",
-          // biome-ignore lint/suspicious/noExplicitAny: mock event
-        } as any,
-      ]),
-    );
+      userRepository.findById as Mock<typeof userRepository.findById>
+    ).mockResolvedValue(ok(user));
     const handler = new DeleteUserCommandHandler(
       userRepository,
       eventStore,

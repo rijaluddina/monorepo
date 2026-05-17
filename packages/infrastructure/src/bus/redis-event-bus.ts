@@ -19,7 +19,6 @@ export class RedisEventBus implements IEventBus, IExternalEventBus {
     string,
     ((event: DomainEvent) => Promise<void>)[]
   >();
-  private isSubscribedToRedis = false;
 
   constructor(redisUrl: string) {
     this.pubClient = new Redis(redisUrl, {
@@ -36,6 +35,8 @@ export class RedisEventBus implements IEventBus, IExternalEventBus {
     this.subClient.on("error", (error) => {
       console.error("[RedisEventBus] Sub Client Error:", error);
     });
+
+    this.initRedisSubscription();
   }
 
   async publish(event: DomainEvent): Promise<Result<void, AppError>> {
@@ -67,23 +68,23 @@ export class RedisEventBus implements IEventBus, IExternalEventBus {
     handler: (event: DomainEvent) => Promise<void>,
   ): void {
     const existing = this.handlers.get(eventType) ?? [];
+    const isNewChannel = existing.length === 0;
+
     this.handlers.set(eventType, [...existing, handler]);
 
-    if (!this.isSubscribedToRedis) {
-      this.initRedisSubscription();
+    if (isNewChannel) {
+      const channel = `events:${eventType}`;
+      console.log(`[RedisEventBus] 📡 Subscribing to channel: ${channel}`);
+      this.subClient.subscribe(channel).catch((err) => {
+        console.error(
+          `[RedisEventBus] ❌ Failed to subscribe to channel ${channel}:`,
+          err,
+        );
+      });
     }
-
-    const channel = `events:${eventType}`;
-    this.subClient.subscribe(channel).catch((err) => {
-      console.error(
-        `[RedisEventBus] Failed to subscribe to channel ${channel}:`,
-        err,
-      );
-    });
   }
 
   private initRedisSubscription(): void {
-    this.isSubscribedToRedis = true;
     this.subClient.on("message", async (channel, message) => {
       const eventType = channel.replace("events:", "");
       const handlers = this.handlers.get(eventType) ?? [];

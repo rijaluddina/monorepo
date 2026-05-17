@@ -31,6 +31,8 @@ export { ChangeUserRoleCommand } from "./user/commands/change-user-role.command.
 export { ChangeUserRoleCommandHandler } from "./user/commands/change-user-role.handler.ts";
 export { DeleteUserCommand } from "./user/commands/delete-user.command.ts";
 export { DeleteUserCommandHandler } from "./user/commands/delete-user.handler.ts";
+export { RestoreUserCommand } from "./user/commands/restore-user.command.ts";
+export { RestoreUserCommandHandler } from "./user/commands/restore-user.handler.ts";
 
 // User — queries
 export { GetUsersQuery } from "./user/queries/get-users.query.ts";

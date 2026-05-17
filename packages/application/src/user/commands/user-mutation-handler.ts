@@ -1,4 +1,4 @@
-import { UniqueId, User } from "@repo/domain";
+import { UniqueId, type User } from "@repo/domain";
 import { NotFoundError, err, isErr, ok } from "@repo/shared";
 import type { AppError, Result } from "@repo/shared";
 import type { IEventBus } from "../../shared/event-bus.port.ts";
@@ -28,17 +28,21 @@ export abstract class UserMutationHandler {
     return this.commitMutation(userResult.value, mutation);
   }
 
-  protected async findUser(userId: string): Promise<Result<User>> {
-    const eventsResult = await this.eventStore.getEvents(userId);
-    if (isErr(eventsResult)) return err(eventsResult.error);
-
-    const events = eventsResult.value;
-    if (events.length === 0) return err(new NotFoundError("User", userId));
-
-    const userResult = User.fromEvents(events, new UniqueId(userId));
+  protected async findUser(
+    userId: string,
+    options?: { includeDeleted?: boolean },
+  ): Promise<Result<User>> {
+    const userResult = await this.userRepository.findById(
+      userId,
+      undefined,
+      options,
+    );
     if (isErr(userResult)) return err(userResult.error);
 
-    return ok(userResult.value);
+    const user = userResult.value;
+    if (!user) return err(new NotFoundError("User", userId));
+
+    return ok(user);
   }
 
   protected async commitMutation(

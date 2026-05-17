@@ -25,7 +25,13 @@ export const userRoutes = (container: AppContainer) =>
           const result = await container.queryBus.ask<
             GetUsersQuery,
             PaginatedResult<UserDTO>
-          >(new GetUsersQuery(Number(query.page), Number(query.limit)));
+          >(
+            new GetUsersQuery(
+              Number(query.page),
+              Number(query.limit),
+              query.search,
+            ),
+          );
 
           if (result.isErr()) {
             set.status = result.error.statusCode ?? 500;
@@ -43,6 +49,7 @@ export const userRoutes = (container: AppContainer) =>
           query: t.Object({
             page: t.Optional(t.Numeric({ default: 1 })),
             limit: t.Optional(t.Numeric({ default: 20 })),
+            search: t.Optional(t.String()),
           }),
           response: {
             200: PaginatedUserResponse,

@@ -366,18 +366,61 @@ function UserRow({ user }: { user: UserDTO }) {
 
 // ─── User List ─────────────────────────────────────────────────────────────
 
+import { useEffect } from "react";
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export function UserList() {
   const [page, setPage] = useState(1);
-  const { data, isLoading, isError, error } = useUsers(page, 10);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
+
+  const { data, isLoading, isError, error } = useUsers(
+    page,
+    10,
+    debouncedSearch,
+  );
+
+  // Reset to first page when search changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only reset page when search actually changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
 
   return (
     <>
       <CreateUserForm />
 
       <div className="card">
-        <div className="card-header">
-          <span className="card-title">👥 Users</span>
-          {data && <span className="card-count">{data.total} total</span>}
+        <div className="card-header" style={{ flexWrap: "wrap", gap: "1rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <span className="card-title">👥 Users</span>
+            {data && <span className="card-count">{data.total} total</span>}
+          </div>
+
+          <div className="form-group" style={{ margin: 0, minWidth: "250px" }}>
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ margin: 0 }}
+            />
+          </div>
         </div>
 
         <table className="user-table">

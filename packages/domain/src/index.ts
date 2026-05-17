@@ -43,3 +43,7 @@ export {
   UserDeletedEvent,
   USER_DELETED,
 } from "./user/events/user-deleted.event.ts";
+export {
+  UserRestoredEvent,
+  USER_RESTORED,
+} from "./user/events/user-restored.event.ts";

@@ -12,6 +12,7 @@ import {
   type IExternalEventBus,
   type IQueryBus,
   type IUnitOfWork,
+  RestoreUserCommandHandler,
 } from "@repo/application";
 import { InMemoryCommandBus } from "../bus/in-memory-command-bus.ts";
 import { InMemoryEventBus } from "../bus/in-memory-event-bus.ts";
@@ -64,7 +65,9 @@ export class AppContainer {
 
     // ── Instantiate projections ─────────────────────────────────────────
     this.userProjection = new UserProjection(eventBus, userRepository);
-    this.userProjection.register();
+    // Note: Registration is disabled because Command Handlers already update
+    // the read model (users table) synchronously in the same transaction.
+    // this.userProjection.register();
 
     // ── Instantiate application handlers (inject ports) ─────────────────
     const createUserHandler = new CreateUserCommandHandler(
@@ -122,6 +125,16 @@ export class AppContainer {
     commandBus.register(
       "DeleteUserCommand",
       new DeleteUserCommandHandler(
+        userRepository,
+        eventStore,
+        eventBus,
+        outboxRepository,
+        unitOfWork,
+      ),
+    );
+    commandBus.register(
+      "RestoreUserCommand",
+      new RestoreUserCommandHandler(
         userRepository,
         eventStore,
         eventBus,

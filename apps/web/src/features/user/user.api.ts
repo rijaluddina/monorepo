@@ -7,9 +7,9 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 };
 
 export const userApi = {
-  getAll: async (page = 1, limit = 20) => {
+  getAll: async (page = 1, limit = 20, search?: string) => {
     const { data, error } = await api.api.v1.users.get({
-      query: { page, limit },
+      query: { page, limit, search },
     });
     if (error) {
       throw new Error(getErrorMessage(error, "Request failed"));
@@ -77,16 +77,16 @@ export const userApi = {
 export const userKeys = {
   all: ["users"] as const,
   lists: () => [...userKeys.all, "list"] as const,
-  list: (page: number, limit: number) =>
-    [...userKeys.lists(), { page, limit }] as const,
+  list: (page: number, limit: number, search?: string) =>
+    [...userKeys.lists(), { page, limit, search }] as const,
   details: () => [...userKeys.all, "detail"] as const,
   detail: (id: string) => [...userKeys.details(), id] as const,
 };
 
-export const useUsers = (page = 1, limit = 10) => {
+export const useUsers = (page = 1, limit = 10, search?: string) => {
   return useQuery({
-    queryKey: userKeys.list(page, limit),
-    queryFn: () => userApi.getAll(page, limit),
+    queryKey: userKeys.list(page, limit, search),
+    queryFn: () => userApi.getAll(page, limit, search),
   });
 };
 

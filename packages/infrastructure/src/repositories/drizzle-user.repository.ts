@@ -11,7 +11,7 @@ import {
   isErr,
   ok,
 } from "@repo/shared";
-import { and, count, eq, isNull } from "drizzle-orm";
+import { and, count, eq, ilike, isNull, or } from "drizzle-orm";
 import type { DrizzleDB } from "../database/drizzle.client.ts";
 import { fromPersistenceContext } from "../database/persistence-context.ts";
 import { users } from "../database/schema.ts";
@@ -40,18 +40,33 @@ export class DrizzleUserRepository implements IUserRepository {
   async findById(
     id: string,
     ctx?: PersistenceContext,
+    options?: { includeDeleted?: boolean },
   ): Promise<Result<Optional<User>, AppError>> {
-    const db = this.getDb(ctx);
     try {
-      const record = await db.query.users.findFirst({
-        where: and(eq(users.id, id), isNull(users.deletedAt)),
-      });
-      if (!record) return ok(undefined);
+      // 1. Load all events for this aggregate from the Event Store
+      const eventsResult = await this.eventStore.getEvents(id, ctx);
+      if (eventsResult.isErr()) return err(eventsResult.error);
 
-      const userResult = this.toDomain(record);
-      if (userResult.isErr()) return err(userResult.error);
+      const events = eventsResult.value;
+      if (events.length === 0) return ok(undefined);
 
-      return ok(userResult.value);
+      // 2. Reconstitute the User aggregate from the event stream
+      const userResult = User.fromEvents(events, new UniqueId(id));
+      if (userResult.isErr()) {
+        return err(
+          new AppError(
+            `Failed to reconstitute user from events: ${userResult.error.message}`,
+            "INFRASTRUCTURE_ERROR",
+          ),
+        );
+      }
+
+      const user = userResult.value;
+
+      // 3. Respect soft-delete (unless includeDeleted is true)
+      if (user.isDeleted && !options?.includeDeleted) return ok(undefined);
+
+      return ok(user);
     } catch (error) {
       return err(this.toInfrastructureError(error));
     }
@@ -63,15 +78,15 @@ export class DrizzleUserRepository implements IUserRepository {
   ): Promise<Result<Optional<User>, AppError>> {
     const db = this.getDb(ctx);
     try {
+      // 1. Lookup the ID in the projection table
       const record = await db.query.users.findFirst({
         where: and(eq(users.email, email), isNull(users.deletedAt)),
+        columns: { id: true },
       });
       if (!record) return ok(undefined);
 
-      const userResult = this.toDomain(record);
-      if (userResult.isErr()) return err(userResult.error);
-
-      return ok(userResult.value);
+      // 2. Reconstitute from Event Store to ensure source-of-truth accuracy
+      return this.findById(record.id, ctx);
     } catch (error) {
       return err(this.toInfrastructureError(error));
     }
@@ -81,6 +96,7 @@ export class DrizzleUserRepository implements IUserRepository {
     params?: {
       page?: number;
       limit?: number;
+      search?: string;
     },
     ctx?: PersistenceContext,
   ): Promise<Result<{ users: User[]; total: number }, AppError>> {
@@ -88,19 +104,28 @@ export class DrizzleUserRepository implements IUserRepository {
     const page = params?.page ?? 1;
     const limit = params?.limit ?? 20;
     const offset = (page - 1) * limit;
+    const search = params?.search;
 
     try {
+      const whereClause = search
+        ? and(
+            isNull(users.deletedAt),
+            or(
+              ilike(users.firstName, `%${search}%`),
+              ilike(users.lastName, `%${search}%`),
+              ilike(users.email, `%${search}%`),
+            ),
+          )
+        : isNull(users.deletedAt);
+
       const [records, totalResult] = await Promise.all([
         db.query.users.findMany({
-          where: isNull(users.deletedAt),
+          where: whereClause,
           limit,
           offset,
           orderBy: (fields, { desc }) => [desc(fields.createdAt)],
         }),
-        db
-          .select({ value: count() })
-          .from(users)
-          .where(isNull(users.deletedAt)),
+        db.select({ value: count() }).from(users).where(whereClause),
       ]);
 
       const total = Number(totalResult[0]?.value ?? 0);

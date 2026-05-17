@@ -17,6 +17,7 @@ export class GetUsersQueryHandler
     const result = await this.userRepository.findAll({
       page: query.page,
       limit: query.limit,
+      search: query.search,
     });
 
     if (isErr(result)) {

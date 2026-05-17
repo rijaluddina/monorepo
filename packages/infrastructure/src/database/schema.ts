@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -36,7 +37,11 @@ export const users = pgTable(
       .$onUpdate(() => new Date()),
     deletedAt: timestamp("deleted_at", { precision: 3, mode: "date" }),
   },
-  (table) => [uniqueIndex("users_email_key").on(table.email)],
+  (table) => [
+    uniqueIndex("users_email_key")
+      .on(table.email)
+      .where(sql`deleted_at IS NULL`),
+  ],
 );
 
 // ─── Event Store Table ───────────────────────────────────────────────────────
@@ -74,4 +79,7 @@ export const outbox = pgTable("outbox", {
   createdAt: timestamp("created_at", { precision: 3, mode: "date" })
     .notNull()
     .defaultNow(),
+  retryCount: integer("retry_count").notNull().default(0),
+  lastError: text("last_error"),
+  nextRetryAt: timestamp("next_retry_at", { precision: 3, mode: "date" }),
 });
