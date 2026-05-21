@@ -21,7 +21,6 @@ import { RedisEventBus } from "../bus/redis-event-bus.ts";
 import { DrizzleUnitOfWork } from "../database/drizzle-unit-of-work.ts";
 import { db } from "../database/drizzle.client.ts";
 import { DrizzleEventStore } from "../event-store/drizzle-event-store.ts";
-import { UserProjection } from "../projections/user.projection.ts";
 import { DrizzleOutboxRepository } from "../repositories/drizzle-outbox.repository.ts";
 import { DrizzleUserRepository } from "../repositories/drizzle-user.repository.ts";
 
@@ -42,7 +41,6 @@ export class AppContainer {
   public readonly eventBus: IEventBus;
   public readonly externalEventBus: IExternalEventBus;
   public readonly unitOfWork: IUnitOfWork;
-  public readonly userProjection: UserProjection;
 
   constructor() {
     // ── Instantiate infrastructure implementations ──────────────────────
@@ -62,12 +60,6 @@ export class AppContainer {
     const commandBus = new InMemoryCommandBus();
     const queryBus = new InMemoryQueryBus();
     const unitOfWork = new DrizzleUnitOfWork(db);
-
-    // ── Instantiate projections ─────────────────────────────────────────
-    this.userProjection = new UserProjection(eventBus, userRepository);
-    // Note: Registration is disabled because Command Handlers already update
-    // the read model (users table) synchronously in the same transaction.
-    // this.userProjection.register();
 
     // ── Instantiate application handlers (inject ports) ─────────────────
     const createUserHandler = new CreateUserCommandHandler(

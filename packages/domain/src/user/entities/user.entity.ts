@@ -152,17 +152,9 @@ export class User extends AggregateRoot<UserProps> {
       return err(new ValidationError("First event must be USER_CREATED"));
     }
 
-    // Create an empty sentinel to satisfy types before replay overwrites it
-    const emptyProps: UserProps = {
-      name: UserName.create("Empty", "User").unwrap(),
-      email: Email.create("empty@example.com").unwrap(),
-      role: "viewer",
-      isActive: false,
-      createdAt: new Date(0),
-      updatedAt: new Date(0),
-    };
-
-    const user = new User(emptyProps, id);
+    // Props are immediately overwritten by replay(); use a type assertion
+    // to avoid constructing throwaway sentinel values.
+    const user = new User({} as unknown as UserProps, id);
     const result = user.replay(events);
     if (isErr(result)) return err(result.error);
     return ok(user);

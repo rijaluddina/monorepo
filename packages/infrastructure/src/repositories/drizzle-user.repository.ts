@@ -3,6 +3,7 @@ import { Email, UniqueId, User, UserName } from "@repo/domain";
 import {
   AppError,
   ConflictError,
+  NotFoundError,
   type Optional,
   type PersistenceContext,
   type Result,
@@ -106,6 +107,18 @@ export class DrizzleUserRepository implements IUserRepository {
     const offset = (page - 1) * limit;
     const search = params?.search;
 
+    // Hybrid approach: findAll reads directly from the projection table (users)
+    // rather than reconstituting each aggregate from the event store.
+    // This is intentional for performance — replaying N event streams for a
+    // paginated list would be prohibitively expensive.
+    //
+    // Consistency guarantee: the projection table is updated synchronously
+    // within the same transaction as the event store append (in save()), so
+    // there is no eventual-consistency window on a single node.
+    //
+    // If you need strict event-sourced reads for list queries, consider a
+    // snapshot pattern or a periodically-rebuilt materialized view.
+
     try {
       const whereClause = search
         ? and(
@@ -205,11 +218,13 @@ export class DrizzleUserRepository implements IUserRepository {
     ctx?: PersistenceContext,
   ): Promise<Result<void, AppError>> {
     try {
-      const userResult = await this.findById(id, ctx);
+      const userResult = await this.findById(id, ctx, { includeDeleted: true });
       if (isErr(userResult)) return err(userResult.error);
 
       const user = userResult.value;
-      if (!user) return ok();
+      if (!user) return err(new NotFoundError(`User "${id}" not found`));
+      if (user.isDeleted)
+        return err(new NotFoundError(`User "${id}" is already deleted`));
 
       user.delete();
       return this.save(user, ctx);

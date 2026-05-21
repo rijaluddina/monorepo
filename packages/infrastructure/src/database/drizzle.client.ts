@@ -8,7 +8,7 @@ import * as schema from "./schema.ts";
 // Load .env from workspace root
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootEnvPath = path.resolve(__dirname, "../../../../.env");
-config({ path: rootEnvPath, override: true });
+config({ path: rootEnvPath });
 
 const databaseUrl = process.env.DATABASE_URL;
 

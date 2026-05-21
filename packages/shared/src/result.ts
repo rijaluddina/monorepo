@@ -107,28 +107,31 @@ export function isErr<T, E extends Error>(
   return result.ok === false;
 }
 
-/**
- * Combine multiple results into a single result.
- * If any result is an Err, the first Err is returned.
- * Otherwise, an Ok with an array of values is returned.
- * Supports tuple types for better type inference.
- */
-export function combine<T extends readonly Result<unknown, Error>[]>(
-  results: [...T],
-): Result<
-  { [K in keyof T]: T[K] extends Result<infer V, Error> ? V : never },
+type UnwrapOk<T extends readonly Result<unknown, Error>[]> = {
+  [K in keyof T]: T[K] extends Result<infer V, Error> ? V : never;
+};
+
+type UnwrapErr<T extends readonly Result<unknown, Error>[]> =
   T[number] extends Result<unknown, infer E>
     ? E extends Error
       ? E
       : Error
-    : Error
-> {
-  const values = [] as unknown[];
+    : Error;
+
+/**
+ * Combine multiple results into a single result.
+ * If any result is an Err, the first Err is returned.
+ * Otherwise, an Ok with a tuple of values is returned.
+ */
+export function combine<T extends readonly Result<unknown, Error>[]>(
+  results: [...T],
+): Result<UnwrapOk<T>, UnwrapErr<T>> {
+  const values: unknown[] = [];
   for (const result of results) {
     if (isErr(result)) {
-      return err(result.error) as never;
+      return err(result.error) as Result<UnwrapOk<T>, UnwrapErr<T>>;
     }
     values.push(result.value);
   }
-  return ok(values) as never;
+  return ok(values as UnwrapOk<T>) as Result<UnwrapOk<T>, UnwrapErr<T>>;
 }
