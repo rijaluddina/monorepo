@@ -75,9 +75,8 @@ cp .env.example .env
 ### 4. Database
 
 ```bash
-cd packages/infrastructure
-bun run db:migrate     # creates tables
-bun run db:seed        # seeds 3 demo users
+bun run --filter @repo/infrastructure db:push   # push schema (no migration files needed)
+bun run --filter @repo/infrastructure db:seed    # seeds 3 demo users
 ```
 
 ### 5. Dev
@@ -160,4 +159,7 @@ This repo uses a **hybrid approach**:
 | `bun run build` | Build all packages & apps |
 | `bun run typecheck` | Type check entire monorepo |
 | `bun run lint` | Lint entire monorepo |
+| `bun run test` | Run all tests (via Turbo) |
 | `bun run clean` | Remove all dist + node_modules |
+| `bun run --filter @repo/infrastructure db:push` | Push Drizzle schema (dev) |
+| `bun run --filter @repo/infrastructure db:seed` | Seed demo users |
