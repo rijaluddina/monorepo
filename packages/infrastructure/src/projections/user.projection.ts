@@ -12,6 +12,10 @@ import {
 import { UniqueId, User } from "@repo/domain";
 
 /**
+ * @deprecated This class is kept as a reference for pure event sourcing.
+ * The current hybrid approach updates the read model synchronously
+ * in the same transaction (see DrizzleUserRepository.save()).
+ *
  * UserProjection — Subscriber that maintains the User Read Model (the "users" table).
  *
  * In a Pure Event Sourcing model, the Read Model is updated by reacting to events.

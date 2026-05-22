@@ -126,12 +126,12 @@ type UnwrapErr<T extends readonly Result<unknown, Error>[]> =
 export function combine<T extends readonly Result<unknown, Error>[]>(
   results: [...T],
 ): Result<UnwrapOk<T>, UnwrapErr<T>> {
-  const values: unknown[] = [];
+  const values = [] as unknown as UnwrapOk<T>;
   for (const result of results) {
     if (isErr(result)) {
-      return err(result.error) as Result<UnwrapOk<T>, UnwrapErr<T>>;
+      return err(result.error as UnwrapErr<T>);
     }
-    values.push(result.value);
+    (values as unknown[]).push(result.value);
   }
-  return ok(values as UnwrapOk<T>) as Result<UnwrapOk<T>, UnwrapErr<T>>;
+  return ok(values);
 }

@@ -24,9 +24,11 @@
       "cache": false
     },
     "db:migrate": {
+      "dependsOn": ["^build"],
       "cache": false
     },
     "db:generate": {
+      "dependsOn": ["^build"],
       "cache": false
     }
   }
