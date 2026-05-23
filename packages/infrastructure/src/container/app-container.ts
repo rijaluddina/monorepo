@@ -25,130 +25,129 @@ import { DrizzleOutboxRepository } from "../repositories/drizzle-outbox.reposito
 import { DrizzleUserRepository } from "../repositories/drizzle-user.repository.ts";
 
 /**
- * AppContainer — Composition Root.
+ * Factory function that creates and wires the AppContainer.
  *
- * Single place where ALL dependencies are wired together.
- * This is where Dependency Inversion is resolved: abstractions
- * are matched to their concrete implementations.
+ * This is the Composition Root — all dependencies are instantiated
+ * and injected here. No `new` keyword needed by consumers.
  *
- * Usage:
- *   const container = new AppContainer();
- *   const bus = container.commandBus;
+ * The return type is inferred from the returned object literal.
+ * `AppContainer` is derived via `ReturnType<typeof createAppContainer>`
+ * so the interface stays in sync with the implementation automatically.
  */
-export class AppContainer {
-  public readonly commandBus: ICommandBus;
-  public readonly queryBus: IQueryBus;
-  public readonly eventBus: IEventBus;
-  public readonly externalEventBus: IExternalEventBus;
-  public readonly unitOfWork: IUnitOfWork;
+export function createAppContainer() {
+  // ── Instantiate infrastructure implementations ──────────────────────
+  const eventStore = new DrizzleEventStore(db);
+  const userRepository = new DrizzleUserRepository(db, eventStore);
+  const outboxRepository = new DrizzleOutboxRepository(db);
 
-  constructor() {
-    // ── Instantiate infrastructure implementations ──────────────────────
-    const eventStore = new DrizzleEventStore(db);
-    const userRepository = new DrizzleUserRepository(db, eventStore);
-    const outboxRepository = new DrizzleOutboxRepository(db);
+  // Use Redis for distributed events if REDIS_URL is provided
+  const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+  const eventBus: IEventBus =
+    process.env.NODE_ENV === "test"
+      ? new InMemoryEventBus()
+      : new RedisEventBus(redisUrl);
 
-    // Use Redis for distributed events if REDIS_URL is provided
-    const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-    const eventBus =
-      process.env.NODE_ENV === "test"
-        ? new InMemoryEventBus()
-        : new RedisEventBus(redisUrl);
+  const externalEventBus: IExternalEventBus = eventBus as IExternalEventBus;
 
-    const externalEventBus = eventBus as IExternalEventBus;
+  const commandBus: ICommandBus = new InMemoryCommandBus();
+  const queryBus: IQueryBus = new InMemoryQueryBus();
+  const unitOfWork: IUnitOfWork = new DrizzleUnitOfWork(db);
 
-    const commandBus = new InMemoryCommandBus();
-    const queryBus = new InMemoryQueryBus();
-    const unitOfWork = new DrizzleUnitOfWork(db);
+  // ── Instantiate application handlers (inject ports) ─────────────────
+  const createUserHandler = new CreateUserCommandHandler(
+    userRepository,
+    eventStore,
+    eventBus,
+    outboxRepository,
+    unitOfWork,
+  );
+  const getUsersHandler = new GetUsersQueryHandler(userRepository);
+  const getUserByIdHandler = new GetUserByIdQueryHandler(userRepository);
 
-    // ── Instantiate application handlers (inject ports) ─────────────────
-    const createUserHandler = new CreateUserCommandHandler(
+  // ── Register handlers on buses ──────────────────────────────────────
+  commandBus.register("CreateUserCommand", createUserHandler);
+  commandBus.register(
+    "ActivateUserCommand",
+    new ActivateUserCommandHandler(
       userRepository,
       eventStore,
       eventBus,
       outboxRepository,
       unitOfWork,
-    );
-    const getUsersHandler = new GetUsersQueryHandler(userRepository);
-    const getUserByIdHandler = new GetUserByIdQueryHandler(userRepository);
+    ),
+  );
+  commandBus.register(
+    "DeactivateUserCommand",
+    new DeactivateUserCommandHandler(
+      userRepository,
+      eventStore,
+      eventBus,
+      outboxRepository,
+      unitOfWork,
+    ),
+  );
+  commandBus.register(
+    "ChangeUserEmailCommand",
+    new ChangeUserEmailCommandHandler(
+      userRepository,
+      eventStore,
+      eventBus,
+      outboxRepository,
+      unitOfWork,
+    ),
+  );
+  commandBus.register(
+    "ChangeUserRoleCommand",
+    new ChangeUserRoleCommandHandler(
+      userRepository,
+      eventStore,
+      eventBus,
+      outboxRepository,
+      unitOfWork,
+    ),
+  );
+  commandBus.register(
+    "DeleteUserCommand",
+    new DeleteUserCommandHandler(
+      userRepository,
+      eventStore,
+      eventBus,
+      outboxRepository,
+      unitOfWork,
+    ),
+  );
+  commandBus.register(
+    "RestoreUserCommand",
+    new RestoreUserCommandHandler(
+      userRepository,
+      eventStore,
+      eventBus,
+      outboxRepository,
+      unitOfWork,
+    ),
+  );
 
-    // ── Register handlers on buses ──────────────────────────────────────
-    commandBus.register("CreateUserCommand", createUserHandler);
-    commandBus.register(
-      "ActivateUserCommand",
-      new ActivateUserCommandHandler(
-        userRepository,
-        eventStore,
-        eventBus,
-        outboxRepository,
-        unitOfWork,
-      ),
-    );
-    commandBus.register(
-      "DeactivateUserCommand",
-      new DeactivateUserCommandHandler(
-        userRepository,
-        eventStore,
-        eventBus,
-        outboxRepository,
-        unitOfWork,
-      ),
-    );
-    commandBus.register(
-      "ChangeUserEmailCommand",
-      new ChangeUserEmailCommandHandler(
-        userRepository,
-        eventStore,
-        eventBus,
-        outboxRepository,
-        unitOfWork,
-      ),
-    );
-    commandBus.register(
-      "ChangeUserRoleCommand",
-      new ChangeUserRoleCommandHandler(
-        userRepository,
-        eventStore,
-        eventBus,
-        outboxRepository,
-        unitOfWork,
-      ),
-    );
-    commandBus.register(
-      "DeleteUserCommand",
-      new DeleteUserCommandHandler(
-        userRepository,
-        eventStore,
-        eventBus,
-        outboxRepository,
-        unitOfWork,
-      ),
-    );
-    commandBus.register(
-      "RestoreUserCommand",
-      new RestoreUserCommandHandler(
-        userRepository,
-        eventStore,
-        eventBus,
-        outboxRepository,
-        unitOfWork,
-      ),
-    );
+  queryBus.register("GetUsersQuery", getUsersHandler);
+  queryBus.register("GetUserByIdQuery", getUserByIdHandler);
 
-    queryBus.register("GetUsersQuery", getUsersHandler);
-    queryBus.register("GetUserByIdQuery", getUserByIdHandler);
-
-    this.commandBus = commandBus;
-    this.queryBus = queryBus;
-    this.eventBus = eventBus;
-    this.externalEventBus = externalEventBus;
-    this.unitOfWork = unitOfWork;
-  }
+  return {
+    commandBus,
+    queryBus,
+    eventBus,
+    externalEventBus,
+    unitOfWork,
+  };
 }
 
 /**
- * Factory function to create a new AppContainer instance.
+ * AppContainer — Composition Root contract (derived from createAppContainer).
+ *
+ * Single place where ALL dependencies are wired together.
+ * This is where Dependency Inversion is resolved: abstractions
+ * are matched to their concrete implementations.
+ *
+ * The type is inferred from the factory function so it automatically
+ * stays in sync with the implementation. If a new bus or service is
+ * added to the return value, the type updates without manual edits.
  */
-export function createAppContainer(): AppContainer {
-  return new AppContainer();
-}
+export type AppContainer = Readonly<ReturnType<typeof createAppContainer>>;

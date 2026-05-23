@@ -8,8 +8,6 @@ export { InMemoryQueryBus } from "./bus/in-memory-query-bus.ts";
 export { InMemoryEventBus } from "./bus/in-memory-event-bus.ts";
 export { RedisEventBus } from "./bus/redis-event-bus.ts";
 export { ConsoleExternalEventBus } from "./bus/console-external-event-bus.ts";
-export {
-  AppContainer,
-  createAppContainer,
-} from "./container/app-container.ts";
+export type { AppContainer } from "./container/app-container.ts";
+export { createAppContainer } from "./container/app-container.ts";
 export * from "./outbox/processor.ts";

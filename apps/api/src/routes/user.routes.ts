@@ -7,6 +7,7 @@ import {
   DeleteUserCommand,
   GetUserByIdQuery,
   GetUsersQuery,
+  RestoreUserCommand,
   type UserDTO,
 } from "@repo/application";
 import type { AppContainer } from "@repo/infrastructure";
@@ -330,6 +331,40 @@ export const userRoutes = (container: AppContainer) =>
             500: ErrorSchema,
           },
           detail: { tags: ["Users"], summary: "Delete a user" },
+        },
+      )
+
+      // PATCH /:id/restore
+      .patch(
+        "/:id/restore",
+        async ({ params, set }) => {
+          const result = await container.commandBus.dispatch<
+            RestoreUserCommand,
+            void
+          >(new RestoreUserCommand(params.id));
+
+          if (result.isErr()) {
+            set.status = result.error.statusCode ?? 500;
+            return {
+              error: {
+                code: result.error.code,
+                message: result.error.message,
+              },
+            };
+          }
+
+          set.status = 204;
+          return;
+        },
+        {
+          params: t.Object({ id: t.String() }),
+          response: {
+            204: t.Void(),
+            400: ErrorSchema,
+            404: ErrorSchema,
+            500: ErrorSchema,
+          },
+          detail: { tags: ["Users"], summary: "Restore a deleted user" },
         },
       ),
   );

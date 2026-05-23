@@ -107,10 +107,20 @@ export function isErr<T, E extends Error>(
   return result.ok === false;
 }
 
+/**
+ * Unwrap the success type from each element of a Result tuple.
+ *
+ * E.g. UnwrapOk<[Result<number, E>, Result<string, E>]> → [number, string]
+ */
 type UnwrapOk<T extends readonly Result<unknown, Error>[]> = {
   [K in keyof T]: T[K] extends Result<infer V, Error> ? V : never;
 };
 
+/**
+ * Unwrap the error type from a Result tuple (union of all error types).
+ *
+ * E.g. UnwrapErr<[Result<number, E1>, Result<string, E2>]> → E1 | E2
+ */
 type UnwrapErr<T extends readonly Result<unknown, Error>[]> =
   T[number] extends Result<unknown, infer E>
     ? E extends Error
@@ -122,16 +132,24 @@ type UnwrapErr<T extends readonly Result<unknown, Error>[]> =
  * Combine multiple results into a single result.
  * If any result is an Err, the first Err is returned.
  * Otherwise, an Ok with a tuple of values is returned.
+ *
+ * Note: The remaining `as` cast is a known TypeScript limitation with
+ * variadic tuple types — the compiler cannot narrow tuple element types
+ * inside a loop (see TypeScript#40336). The `err` cast is also unavoidable
+ * because `result.error` type from a single iteration cannot be unified
+ * with the computed `UnwrapErr<T>` union.
  */
 export function combine<T extends readonly Result<unknown, Error>[]>(
   results: [...T],
 ): Result<UnwrapOk<T>, UnwrapErr<T>> {
-  const values = [] as unknown as UnwrapOk<T>;
+  const values: unknown[] = [];
+
   for (const result of results) {
     if (isErr(result)) {
       return err(result.error as UnwrapErr<T>);
     }
-    (values as unknown[]).push(result.value);
+    values.push(result.value);
   }
-  return ok(values);
+
+  return ok(values as UnwrapOk<T>);
 }

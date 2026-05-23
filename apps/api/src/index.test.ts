@@ -145,6 +145,110 @@ describe("API Integration Tests", () => {
       expect(body.page).toBeDefined();
       expect(body.limit).toBeDefined();
     });
+
+    it("should search users by first name", async () => {
+      const uniqueSuffix = `srch-${Date.now()}`;
+      await createUser({
+        firstName: uniqueSuffix,
+        lastName: "SearchTest",
+        email: `${uniqueSuffix}@example.com`,
+        role: "member",
+      });
+
+      const response = await app.handle(
+        new Request(`http://localhost/api/v1/users?search=${uniqueSuffix}`),
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        data: { firstName: string }[];
+        total: number;
+      };
+      expect(body.total).toBeGreaterThanOrEqual(1);
+      expect(body.data.some((u) => u.firstName === uniqueSuffix)).toBe(true);
+    });
+
+    it("should search users by last name", async () => {
+      const uniqueSuffix = `ln-${Date.now()}`;
+      await createUser({
+        firstName: "Dummy",
+        lastName: uniqueSuffix,
+        email: `${uniqueSuffix}@example.com`,
+        role: "member",
+      });
+
+      const response = await app.handle(
+        new Request(`http://localhost/api/v1/users?search=${uniqueSuffix}`),
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        data: { lastName: string }[];
+        total: number;
+      };
+      expect(body.total).toBeGreaterThanOrEqual(1);
+      expect(body.data.some((u) => u.lastName === uniqueSuffix)).toBe(true);
+    });
+
+    it("should search users by email", async () => {
+      const uniqueSuffix = `email-${Date.now()}`;
+      const email = `${uniqueSuffix}@find-me.com`;
+      await createUser({
+        firstName: "EmailSearch",
+        lastName: "Test",
+        email,
+        role: "viewer",
+      });
+
+      const response = await app.handle(
+        new Request(
+          `http://localhost/api/v1/users?search=${uniqueSuffix}%40find-me.com`,
+        ),
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        data: { email: string }[];
+        total: number;
+      };
+      expect(body.total).toBeGreaterThanOrEqual(1);
+      expect(body.data.some((u) => u.email === email)).toBe(true);
+    });
+
+    it("should return empty results for a non-matching search", async () => {
+      const response = await app.handle(
+        new Request("http://localhost/api/v1/users?search=ZZZZNONEXISTENTZZZZ"),
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        data: unknown[];
+        total: number;
+      };
+      expect(body.data).toBeArray();
+      expect(body.total).toBe(0);
+      expect(body.data).toHaveLength(0);
+    });
+
+    it("should perform case-insensitive search", async () => {
+      const uniqueSuffix = `CaseTest-${Date.now()}`;
+      await createUser({
+        firstName: uniqueSuffix,
+        lastName: "CI",
+        email: `${uniqueSuffix.toLowerCase()}@case-test.com`,
+        role: "member",
+      });
+
+      // Search with lowercase
+      const response = await app.handle(
+        new Request(
+          `http://localhost/api/v1/users?search=${uniqueSuffix.toLowerCase()}`,
+        ),
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        data: { firstName: string }[];
+        total: number;
+      };
+      expect(body.total).toBeGreaterThanOrEqual(1);
+      expect(body.data.some((u) => u.firstName === uniqueSuffix)).toBe(true);
+    });
   });
 
   describe("GET /api/v1/users/:id", () => {
@@ -325,6 +429,141 @@ describe("API Integration Tests", () => {
         new Request(`http://localhost/api/v1/users/${createdUser.id}`),
       );
       expect(getResponse.status).toBe(404);
+    });
+
+    it("should return 409 when deleting an already deleted user", async () => {
+      const createdUser = await createUser({
+        firstName: "DeleteAgain",
+        lastName: "Test",
+        email: `delete-again-${Date.now()}-${crypto.randomUUID()}@example.com`,
+        role: "viewer",
+      });
+
+      // First delete — should succeed
+      const firstDelete = await app.handle(
+        new Request(`http://localhost/api/v1/users/${createdUser.id}`, {
+          method: "DELETE",
+        }),
+      );
+      expect(firstDelete.status).toBe(204);
+      await sleep(50);
+
+      // Second delete — should fail with 409 Conflict
+      const secondDelete = await app.handle(
+        new Request(`http://localhost/api/v1/users/${createdUser.id}`, {
+          method: "DELETE",
+        }),
+      );
+      expect(secondDelete.status).toBe(409);
+    });
+  });
+
+  describe("PATCH /api/v1/users/:id/restore", () => {
+    it("should restore a deleted user and preserve all properties", async () => {
+      const createdUser = await createUser({
+        firstName: "Restore",
+        lastName: "Me",
+        email: `restore-${Date.now()}-${crypto.randomUUID()}@example.com`,
+        role: "viewer",
+      });
+
+      // Save properties before deletion
+      const originalProps = {
+        firstName: createdUser.firstName,
+        lastName: createdUser.lastName,
+        email: createdUser.email,
+        role: createdUser.role,
+        isActive: createdUser.isActive,
+      };
+
+      // Delete the user
+      const deleteResponse = await app.handle(
+        new Request(`http://localhost/api/v1/users/${createdUser.id}`, {
+          method: "DELETE",
+        }),
+      );
+      expect(deleteResponse.status).toBe(204);
+      await sleep(50);
+
+      // Verify it's deleted (404)
+      const getBeforeRestore = await app.handle(
+        new Request(`http://localhost/api/v1/users/${createdUser.id}`),
+      );
+      expect(getBeforeRestore.status).toBe(404);
+
+      // Restore the user
+      const restoreResponse = await app.handle(
+        new Request(`http://localhost/api/v1/users/${createdUser.id}/restore`, {
+          method: "PATCH",
+        }),
+      );
+      expect(restoreResponse.status).toBe(204);
+      await sleep(50);
+
+      // Verify it's accessible again with all properties preserved
+      const getAfterRestore = await app.handle(
+        new Request(`http://localhost/api/v1/users/${createdUser.id}`),
+      );
+      expect(getAfterRestore.status).toBe(200);
+      const body = (await getAfterRestore.json()) as {
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+        role: string;
+        isActive: boolean;
+      };
+
+      expect(body.id).toBe(createdUser.id);
+      expect(body.firstName).toBe(originalProps.firstName);
+      expect(body.lastName).toBe(originalProps.lastName);
+      expect(body.email).toBe(originalProps.email);
+      expect(body.role).toBe(originalProps.role);
+      expect(body.isActive).toBe(originalProps.isActive);
+    });
+
+    it("should return 204 when restoring an active (non-deleted) user", async () => {
+      const createdUser = await createUser({
+        firstName: "RestoreNoop",
+        lastName: "Test",
+        email: `restore-noop-${Date.now()}-${crypto.randomUUID()}@example.com`,
+        role: "admin",
+      });
+
+      // Restore an active user — domain logic is a no-op, returns 204
+      const restoreResponse = await app.handle(
+        new Request(`http://localhost/api/v1/users/${createdUser.id}/restore`, {
+          method: "PATCH",
+        }),
+      );
+      expect(restoreResponse.status).toBe(204);
+      await sleep(50);
+
+      // User should still be accessible and unchanged
+      const getResponse = await app.handle(
+        new Request(`http://localhost/api/v1/users/${createdUser.id}`),
+      );
+      expect(getResponse.status).toBe(200);
+      const body = (await getResponse.json()) as {
+        id: string;
+        firstName: string;
+        isActive: boolean;
+      };
+      expect(body.id).toBe(createdUser.id);
+      expect(body.firstName).toBe("RestoreNoop");
+    });
+
+    it("should return 404 when restoring a non-existent user", async () => {
+      const response = await app.handle(
+        new Request(
+          "http://localhost/api/v1/users/00000000-0000-0000-0000-000000000000/restore",
+          {
+            method: "PATCH",
+          },
+        ),
+      );
+
+      expect(response.status).toBe(404);
     });
   });
 });
