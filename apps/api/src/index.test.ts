@@ -1,9 +1,24 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+} from "bun:test";
+import type { AppContainer } from "@repo/infrastructure";
 import {
   createAppContainer,
+  db,
+  outbox,
+  processOutbox,
   startOutboxProcessor,
   stopOutboxProcessor,
 } from "@repo/infrastructure";
+import { err, ok } from "@repo/shared";
+import { eq } from "drizzle-orm";
 import { createServer } from "./server";
 
 process.env.NODE_ENV = "test";
@@ -564,6 +579,141 @@ describe("API Integration Tests", () => {
       );
 
       expect(response.status).toBe(404);
+    });
+  });
+
+  describe("Outbox Processor E2E", () => {
+    const originalLog = console.log;
+    const originalError = console.error;
+    const publishedEvents: {
+      eventType: string;
+      aggregateId: string;
+      version: number;
+      occurredAt: Date;
+    }[] = [];
+
+    beforeEach(async () => {
+      console.log = mock(() => {});
+      console.error = mock(() => {});
+      await stopOutboxProcessor();
+      publishedEvents.length = 0;
+    });
+
+    afterEach(() => {
+      startOutboxProcessor(container, 20);
+      console.log = originalLog;
+      console.error = originalError;
+    });
+
+    it("should publish events to external bus and delete outbox rows on success", async () => {
+      const mockExternalBus = {
+        publish: mock(
+          async (event: {
+            eventType: string;
+            aggregateId: string;
+            version: number;
+            occurredAt: Date;
+          }) => {
+            publishedEvents.push({
+              eventType: event.eventType,
+              aggregateId: event.aggregateId,
+              version: event.version,
+              occurredAt: event.occurredAt,
+            });
+            return ok(undefined);
+          },
+        ),
+      };
+
+      // Create a user — this writes USER_CREATED to the outbox table
+      const createdUser = await createUser({
+        firstName: "OutboxE2E",
+        lastName: "Success",
+        email: `outbox-e2e-${Date.now()}-${crypto.randomUUID()}@example.com`,
+        role: "member",
+      });
+
+      // Verify outbox has a row for this user
+      const beforeRows = await db.query.outbox.findMany({
+        where: (fields, { eq }) => eq(fields.aggregateId, createdUser.id),
+      });
+      expect(beforeRows.length).toBeGreaterThanOrEqual(1);
+      const beforeRow = beforeRows[0];
+      expect(beforeRow?.eventType).toBe("UserCreated");
+      expect(beforeRow?.retryCount).toBe(0);
+
+      // Save the expected values for event reconstruction verification
+      const expectedCreatedAt = beforeRow?.createdAt;
+      const expectedVersion =
+        (beforeRow?.payload as { version?: number })?.version ?? 1;
+
+      // Run the outbox processor with our mock
+      await processOutbox({
+        externalEventBus: mockExternalBus,
+      } as unknown as AppContainer);
+
+      // Verify the mock was called with the correct event
+      expect(mockExternalBus.publish).toHaveBeenCalledTimes(1);
+      const publishedEvent = publishedEvents[0];
+      expect(publishedEvent?.eventType).toBe("UserCreated");
+      expect(publishedEvent?.aggregateId).toBe(createdUser.id);
+
+      // Verify event reconstruction from outbox payload:
+      // processor.ts sets occurredAt = row.createdAt
+      expect(publishedEvent?.occurredAt).toBeInstanceOf(Date);
+      if (expectedCreatedAt && publishedEvent?.occurredAt) {
+        expect(publishedEvent.occurredAt.getTime()).toBe(
+          expectedCreatedAt.getTime(),
+        );
+      }
+      // processor.ts sets version = (eventData.version as number) ?? 1
+      expect(publishedEvent?.version).toBe(expectedVersion);
+
+      // Verify outbox row was deleted after successful publish
+      const afterRows = await db.query.outbox.findMany({
+        where: (fields, { eq }) => eq(fields.aggregateId, createdUser.id),
+      });
+      expect(afterRows.length).toBe(0);
+    });
+
+    it("should increment retry count when publish fails", async () => {
+      const mockExternalBus = {
+        publish: mock(async () => err(new Error("Network error"))),
+      };
+
+      // Create a user — this writes USER_CREATED to the outbox table
+      const createdUser = await createUser({
+        firstName: "OutboxFail",
+        lastName: "Test",
+        email: `outbox-fail-${Date.now()}-${crypto.randomUUID()}@example.com`,
+        role: "member",
+      });
+
+      // Run the outbox processor with our failing mock
+      await processOutbox({
+        externalEventBus: mockExternalBus,
+      } as unknown as AppContainer);
+
+      // Verify publish was attempted
+      expect(mockExternalBus.publish).toHaveBeenCalled();
+
+      // Verify outbox row still exists with incremented retry count
+      const rows = await db.query.outbox.findMany({
+        where: (fields, { eq }) => eq(fields.aggregateId, createdUser.id),
+      });
+      expect(rows.length).toBeGreaterThanOrEqual(1);
+      if (rows[0]) {
+        expect(rows[0].retryCount).toBe(1);
+        expect(rows[0].lastError).toBe("Network error");
+        expect(rows[0].nextRetryAt).toBeDefined();
+      }
+
+      // Clean up: delete the outbox row directly (processOutbox can't be used
+      // because nextRetryAt was set 10s in the future by the exponential backoff)
+      const rowToDelete = rows[0];
+      if (rowToDelete) {
+        await db.delete(outbox).where(eq(outbox.id, rowToDelete.id));
+      }
     });
   });
 });

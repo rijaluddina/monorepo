@@ -54,6 +54,11 @@ export abstract class UserMutationHandler {
       return err(mutationResult.error);
     }
 
+    // No events raised (no-op mutation) — nothing to persist
+    if (user.domainEvents.length === 0) {
+      return ok();
+    }
+
     const transactionResult = await this.unitOfWork.run(async (ctx) => {
       // 1. Persist current state to Read Model (Synchronous Projection)
       const saveResult = await this.userRepository.save(user, ctx);

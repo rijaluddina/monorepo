@@ -1,8 +1,19 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+} from "bun:test";
 import { err, ok } from "@repo/shared";
 import type { AppContainer } from "../container/app-container.ts";
 import { db } from "../database/drizzle.client.ts";
 import { processOutbox } from "./processor.ts";
+
+const originalLog = console.log;
+const originalError = console.error;
 
 // We mock the database calls.
 mock.module("../database/drizzle.client.ts", () => ({
@@ -27,6 +38,16 @@ mock.module("../database/drizzle.client.ts", () => ({
 }));
 
 type MockFn = ReturnType<typeof mock>;
+
+beforeAll(() => {
+  console.log = mock(() => {});
+  console.error = mock(() => {});
+});
+
+afterAll(() => {
+  console.log = originalLog;
+  console.error = originalError;
+});
 
 beforeEach(() => {
   (db.select as MockFn).mockClear();
