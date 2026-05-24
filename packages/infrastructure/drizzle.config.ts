@@ -1,5 +1,5 @@
 import path from "node:path";
-import { config } from "dotenv";
+import { config } from "@dotenvx/dotenvx";
 import { defineConfig } from "drizzle-kit";
 
 // Load .env from workspace root

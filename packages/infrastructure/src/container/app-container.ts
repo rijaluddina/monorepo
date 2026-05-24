@@ -19,7 +19,8 @@ import { InMemoryEventBus } from "../bus/in-memory-event-bus.ts";
 import { InMemoryQueryBus } from "../bus/in-memory-query-bus.ts";
 import { RedisEventBus } from "../bus/redis-event-bus.ts";
 import { DrizzleUnitOfWork } from "../database/drizzle-unit-of-work.ts";
-import { db } from "../database/drizzle.client.ts";
+import { db as defaultDb } from "../database/drizzle.client.ts";
+import type { DrizzleDB } from "../database/drizzle.client.ts";
 import { DrizzleEventStore } from "../event-store/drizzle-event-store.ts";
 import { DrizzleOutboxRepository } from "../repositories/drizzle-outbox.repository.ts";
 import { DrizzleUserRepository } from "../repositories/drizzle-user.repository.ts";
@@ -34,7 +35,7 @@ import { DrizzleUserRepository } from "../repositories/drizzle-user.repository.t
  * `AppContainer` is derived via `ReturnType<typeof createAppContainer>`
  * so the interface stays in sync with the implementation automatically.
  */
-export function createAppContainer() {
+export function createAppContainer(db: DrizzleDB = defaultDb) {
   // ── Instantiate infrastructure implementations ──────────────────────
   const eventStore = new DrizzleEventStore(db);
   const userRepository = new DrizzleUserRepository(db, eventStore);
