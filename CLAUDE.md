@@ -60,6 +60,13 @@ Domain (packages/domain) ← zero deps
 
 **Dependency Inversion** (`packages/infrastructure/src/container/app-container.ts`): `AppContainer` composition root. Wire abstractions to impls.
 
+**Graceful Shutdown** (`apps/api/src/index.ts`): On `SIGINT`/`SIGTERM`, shutdown in order:
+1. `stopOutboxProcessor()` — stop polling, finish current iteration
+2. `container.disconnect()` — close Redis pub/sub connections (no-op for `InMemoryEventBus`)
+3. `pool.end()` — close PostgreSQL connection pool
+
+`AppContainer.disconnect()` uses a **duck-type check** to clean up only when the event bus has a `disconnect` method (e.g., `RedisEventBus`). `InMemoryEventBus` has no external connections, so it skips cleanup. This keeps the AppContainer agnostic to concrete implementations.
+
 **CQRS Flow** (create user):
 ```
 POST /api/users

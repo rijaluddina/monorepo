@@ -1,4 +1,4 @@
-import type { IEventBus } from "@repo/application";
+import type { IEventBus, IExternalEventBus } from "@repo/application";
 import type { DomainEvent } from "@repo/domain";
 import { type AppError, type Result, ok } from "@repo/shared";
 
@@ -10,7 +10,7 @@ type EventHandler = (event: DomainEvent) => Promise<void>;
  * Replace with Redis Streams / RabbitMQ / Kafka adapter for production
  * distributed event-driven architectures.
  */
-export class InMemoryEventBus implements IEventBus {
+export class InMemoryEventBus implements IEventBus, IExternalEventBus {
   private readonly handlers = new Map<string, EventHandler[]>();
 
   subscribe(eventType: string, handler: EventHandler): void {

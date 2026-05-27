@@ -1,7 +1,7 @@
 import { NotFoundError, err, isErr, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
 import type { QueryHandler } from "../../shared/query-handler.ts";
-import type { UserDTO } from "../dto/user.dto.ts";
+import type { UserDTO } from "@repo/shared";
 import type { IUserRepository } from "../ports/user-repository.port.ts";
 import { mapUserToDTO } from "../user.mapper.ts";
 import type { GetUserByIdQuery } from "./get-user-by-id.query.ts";

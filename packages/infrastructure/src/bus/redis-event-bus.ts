@@ -107,6 +107,18 @@ export class RedisEventBus implements IEventBus, IExternalEventBus {
   }
 
   async disconnect(): Promise<void> {
-    await Promise.all([this.pubClient.quit(), this.subClient.quit()]);
+    const results = await Promise.allSettled([
+      this.pubClient.quit(),
+      this.subClient.quit(),
+    ]);
+
+    for (const result of results) {
+      if (result.status === "rejected") {
+        console.error(
+          "[RedisEventBus] Error during disconnect:",
+          result.reason,
+        );
+      }
+    }
   }
 }

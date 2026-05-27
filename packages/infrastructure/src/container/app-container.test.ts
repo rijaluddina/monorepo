@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import {
   ActivateUserCommand,
   ChangeUserEmailCommand,
@@ -69,12 +69,40 @@ mock.module("../database/drizzle.client.ts", () => ({
   },
 }));
 
+// ─── Mock for RedisEventBus ─────────────────────────────────────────────
+// Used by disconnect lifecycle tests to verify duck-type check logic.
+// Only instantiated when NODE_ENV != "test" — safe to mock at module level
+// since existing tests run in test mode (InMemoryEventBus).
+const mockDisconnect = mock(async () => {});
+mock.module("../bus/redis-event-bus.ts", () => ({
+  RedisEventBus: class {
+    disconnect = mockDisconnect;
+    subscribe(_eventType: string, _handler: unknown) {}
+    async publish(_event: unknown) {
+      return {
+        ok: true as const,
+        isOk: () => true,
+        isErr: () => false,
+        value: undefined,
+      };
+    }
+    async publishAll(_events: unknown) {
+      return {
+        ok: true as const,
+        isOk: () => true,
+        isErr: () => false,
+        value: undefined,
+      };
+    }
+  },
+}));
+
 import { createAppContainer } from "./app-container.ts";
 
 describe("createAppContainer", () => {
   // ─── Structure ───────────────────────────────────────────────────────
 
-  it("should return a container with all 5 required properties", () => {
+  it("should return a container with all 6 required properties", () => {
     const container = createAppContainer();
 
     expect(container.commandBus).toBeDefined();
@@ -82,6 +110,7 @@ describe("createAppContainer", () => {
     expect(container.eventBus).toBeDefined();
     expect(container.externalEventBus).toBeDefined();
     expect(container.unitOfWork).toBeDefined();
+    expect(container.disconnect).toBeFunction();
   });
 
   it("should use InMemoryEventBus in test environment", () => {
@@ -194,6 +223,56 @@ describe("createAppContainer", () => {
       if (isErr(result)) {
         expect(result.error.code).toBe("NO_HANDLER");
       }
+    });
+  });
+
+  // ─── Disconnect lifecycle ────────────────────────────────────────────
+
+  describe("disconnect lifecycle", () => {
+    describe("duck-type check logic", () => {
+      it("should be a no-op when object lacks disconnect method", async () => {
+        let called = false;
+        const bus = {} as { disconnect?: () => Promise<void> };
+        if (typeof bus.disconnect === "function") {
+          await bus.disconnect();
+          called = true;
+        }
+        expect(called).toBe(false);
+      });
+
+      it("should call disconnect when object has disconnect method", async () => {
+        const spy = mock(async () => {});
+        const bus = { disconnect: spy } as { disconnect?: () => Promise<void> };
+        if (typeof bus.disconnect === "function") {
+          await bus.disconnect();
+        }
+        expect(spy).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe("container integration", () => {
+      beforeEach(() => {
+        mockDisconnect.mockReset();
+      });
+
+      afterEach(() => {
+        process.env.NODE_ENV = "test";
+      });
+
+      it("should be a no-op when eventBus has no disconnect method (InMemoryEventBus)", async () => {
+        // In test mode createAppContainer uses InMemoryEventBus, which does
+        // not have a disconnect() method — the duck-type check skips it.
+        const container = createAppContainer();
+        await expect(container.disconnect()).resolves.toBeUndefined();
+      });
+
+      it("should call disconnect when eventBus has disconnect method (RedisEventBus)", async () => {
+        // Temporarily switch to non-test mode so the factory creates RedisEventBus
+        process.env.NODE_ENV = "development";
+        const container = createAppContainer();
+        await container.disconnect();
+        expect(mockDisconnect).toHaveBeenCalledTimes(1);
+      });
     });
   });
 

@@ -1,9 +1,17 @@
+import { EdenFetchError } from "@elysiajs/eden";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 
+interface ApiErrorBody {
+  error: { code: string; message: string };
+}
+
 const getErrorMessage = (error: unknown, fallback: string): string => {
-  // biome-ignore lint/suspicious/noExplicitAny: error.value is unknown/generic from Eden
-  return (error as any)?.value?.error?.message || fallback;
+  if (error instanceof EdenFetchError) {
+    const body = error.value as ApiErrorBody;
+    return body?.error?.message ?? fallback;
+  }
+  return fallback;
 };
 
 export const userApi = {

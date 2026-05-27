@@ -6,11 +6,16 @@ import { defineConfig } from "drizzle-kit";
 const rootEnvPath = path.resolve(process.cwd(), "../../.env");
 config({ path: rootEnvPath, override: true });
 
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL environment variable is required");
+}
+
 export default defineConfig({
   schema: "./src/database/schema.ts",
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL as string,
+    url: databaseUrl,
   },
 });

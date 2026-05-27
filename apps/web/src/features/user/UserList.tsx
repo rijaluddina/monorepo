@@ -1,4 +1,4 @@
-import type { UserDTO } from "@repo/application";
+import type { UserDTO } from "@repo/shared";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import {

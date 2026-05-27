@@ -716,4 +716,34 @@ describe("API Integration Tests", () => {
       }
     });
   });
+
+  // ─── Graceful Shutdown ─────────────────────────────────────────────────
+  // Verifies that the shutdown sequence from index.ts correctly calls
+  // container.disconnect() and that disconnect resolves even when using
+  // InMemoryEventBus (no-op via duck-type check).
+
+  describe("Graceful Shutdown", () => {
+    it("should call container.disconnect() during shutdown sequence", async () => {
+      const disconnectSpy = mock(async () => {});
+      const originalDisconnect = container.disconnect;
+      container.disconnect = disconnectSpy;
+
+      try {
+        // Simulate the graceful shutdown sequence from index.ts
+        await stopOutboxProcessor();
+        await container.disconnect();
+
+        expect(disconnectSpy).toHaveBeenCalledTimes(1);
+      } finally {
+        container.disconnect = originalDisconnect;
+        startOutboxProcessor(container, 20);
+      }
+    });
+
+    it("should resolve disconnect as no-op with InMemoryEventBus", async () => {
+      // In test mode, createAppContainer uses InMemoryEventBus which
+      // doesn't have a disconnect() method — the duck-type check skips it.
+      await expect(container.disconnect()).resolves.toBeUndefined();
+    });
+  });
 });

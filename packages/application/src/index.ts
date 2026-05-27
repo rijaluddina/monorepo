@@ -15,8 +15,8 @@ export type { IUnitOfWork } from "./shared/unit-of-work.port.ts";
 // User — ports
 export type { IUserRepository } from "./user/ports/user-repository.port.ts";
 
-// User — DTOs
-export type { UserDTO } from "./user/dto/user.dto.ts";
+// User — DTOs (re-exported from @repo/shared for backward compatibility)
+export type { UserDTO } from "@repo/shared";
 
 // User — commands
 export { CreateUserCommand } from "./user/commands/create-user.command.ts";

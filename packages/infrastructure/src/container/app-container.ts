@@ -8,8 +8,6 @@ import {
   GetUserByIdQueryHandler,
   GetUsersQueryHandler,
   type ICommandBus,
-  type IEventBus,
-  type IExternalEventBus,
   type IQueryBus,
   type IUnitOfWork,
   RestoreUserCommandHandler,
@@ -43,12 +41,12 @@ export function createAppContainer(db: DrizzleDB = defaultDb) {
 
   // Use Redis for distributed events if REDIS_URL is provided
   const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-  const eventBus: IEventBus =
+  const eventBus =
     process.env.NODE_ENV === "test"
       ? new InMemoryEventBus()
       : new RedisEventBus(redisUrl);
 
-  const externalEventBus: IExternalEventBus = eventBus as IExternalEventBus;
+  const externalEventBus = eventBus;
 
   const commandBus: ICommandBus = new InMemoryCommandBus();
   const queryBus: IQueryBus = new InMemoryQueryBus();
@@ -137,6 +135,12 @@ export function createAppContainer(db: DrizzleDB = defaultDb) {
     eventBus,
     externalEventBus,
     unitOfWork,
+    disconnect: async () => {
+      const bus = eventBus as { disconnect?: () => Promise<void> };
+      if (typeof bus.disconnect === "function") {
+        await bus.disconnect();
+      }
+    },
   };
 }
 

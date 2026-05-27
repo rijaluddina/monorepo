@@ -14,8 +14,7 @@
   },
   "dependencies": {
     "@elysiajs/eden": "^1.4.9",
-    "@repo/api": "workspace:*",
-    "@repo/application": "*",
+    "@repo/api": "*",
     "@repo/shared": "*",
     "@repo/ui": "*",
     "@tanstack/react-query": "^5.100.6",
