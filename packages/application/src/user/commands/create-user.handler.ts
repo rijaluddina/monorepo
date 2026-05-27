@@ -1,12 +1,12 @@
 import { User } from "@repo/domain";
 import { type AppError, ConflictError, err, isErr, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
+import type { UserDTO } from "@repo/shared";
 import type { CommandHandler } from "../../shared/command-handler.ts";
 import type { IEventBus } from "../../shared/event-bus.port.ts";
 import type { IEventStore } from "../../shared/event-store.port.ts";
 import type { IOutboxPort } from "../../shared/ports/outbox.port.ts";
 import type { IUnitOfWork } from "../../shared/unit-of-work.port.ts";
-import type { UserDTO } from "@repo/shared";
 import type { IUserRepository } from "../ports/user-repository.port.ts";
 import { mapUserToDTO } from "../user.mapper.ts";
 import type { CreateUserCommand } from "./create-user.command.ts";

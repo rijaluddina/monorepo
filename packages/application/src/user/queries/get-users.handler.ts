@@ -1,7 +1,7 @@
 import { err, isErr, ok } from "@repo/shared";
 import type { PaginatedResult, Result } from "@repo/shared";
-import type { QueryHandler } from "../../shared/query-handler.ts";
 import type { UserDTO } from "@repo/shared";
+import type { QueryHandler } from "../../shared/query-handler.ts";
 import type { IUserRepository } from "../ports/user-repository.port.ts";
 import { mapUserToDTO } from "../user.mapper.ts";
 import type { GetUsersQuery } from "./get-users.query.ts";
