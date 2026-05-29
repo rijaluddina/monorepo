@@ -94,6 +94,7 @@ describe("CreateUserCommandHandler", () => {
     expect(userRepository.save).toHaveBeenCalled();
     expect(eventStore.append).toHaveBeenCalled();
     expect(outboxPort.insert).toHaveBeenCalled();
+    expect(eventBus.publishAll).toHaveBeenCalled();
   });
 
   test("should fail if email already exists", async () => {
@@ -117,6 +118,7 @@ describe("CreateUserCommandHandler", () => {
       expect(result.error).toBeInstanceOf(ConflictError);
     }
     expect(userRepository.save).not.toHaveBeenCalled();
+    expect(eventBus.publishAll).not.toHaveBeenCalled();
   });
 
   test("should fail if validation fails", async () => {
@@ -136,5 +138,6 @@ describe("CreateUserCommandHandler", () => {
       expect(result.error).toBeInstanceOf(ValidationError);
     }
     expect(userRepository.save).not.toHaveBeenCalled();
+    expect(eventBus.publishAll).not.toHaveBeenCalled();
   });
 });

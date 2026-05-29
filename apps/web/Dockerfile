@@ -22,6 +22,7 @@ COPY packages/typescript-config ./packages/typescript-config
 # @repo/application remains because @repo/api depends on it transitively.
 COPY apps/api                  ./apps/api
 COPY packages/application      ./packages/application
+COPY packages/config           ./packages/config
 COPY packages/domain           ./packages/domain
 COPY packages/infrastructure   ./packages/infrastructure
 

@@ -83,10 +83,16 @@ export class CreateUserCommandHandler
       return err(transactionResult.error);
     }
 
-    // 6. Clear events from aggregate memory
+    // 6. Publish to internal event bus (in-process subscribers react in real-time)
+    const publishResult = await this.eventBus.publishAll(user.domainEvents);
+    if (isErr(publishResult)) {
+      return err(publishResult.error);
+    }
+
+    // 7. Clear events from aggregate memory
     user.clearEvents();
 
-    // 7. Return DTO
+    // 8. Return DTO
     return ok(mapUserToDTO(user));
   }
 }

@@ -1,6 +1,6 @@
 {
-  "$schema": "https://v2-9-14.turborepo.dev/schema.json",
-  "globalEnv": ["NODE_ENV", "DATABASE_URL"],
+  "$schema": "https://v2-9-16.turborepo.dev/schema.json",
+  "globalEnv": ["NODE_ENV", "DATABASE_URL", "REDIS_URL", "CORS_ORIGIN", "PORT", "LOG_LEVEL", "OUTBOX_INTERVAL"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -14,7 +14,6 @@
       "dependsOn": ["^lint"]
     },
     "test": {
-      "dependsOn": ["^build"],
       "outputs": []
     },
     "typecheck": {

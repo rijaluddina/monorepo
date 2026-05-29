@@ -81,6 +81,12 @@ export abstract class UserMutationHandler {
 
     if (isErr(transactionResult)) return err(transactionResult.error);
 
+    // 4. Publish to internal event bus (in-process subscribers react in real-time)
+    const publishResult = await this.eventBus.publishAll(user.domainEvents);
+    if (isErr(publishResult)) {
+      return err(publishResult.error);
+    }
+
     user.clearEvents();
 
     return ok();

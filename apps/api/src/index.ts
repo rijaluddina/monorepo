@@ -1,58 +1,10 @@
-import {
-  createAppContainer,
-  pool,
-  startOutboxProcessor,
-  stopOutboxProcessor,
-} from "@repo/infrastructure";
-import { z } from "zod";
+import { envSchema } from "@repo/config";
 import { createServer, getCorsOrigin } from "./server.ts";
 
 // ── Environment validation ──────────────────────────────────────────────────
-// Validated early at startup so any missing/misconfigured env vars fail fast
-// with clear error messages instead of obscure runtime failures.
-
-const envSchema = z
-  .object({
-    NODE_ENV: z
-      .enum(["development", "production", "test"])
-      .default("development"),
-    PORT: z.coerce.number().int().positive().optional(),
-    DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-    REDIS_URL: z.string().min(1).default("redis://localhost:6379"),
-    CORS_ORIGIN: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.NODE_ENV !== "production") return;
-
-    if (!data.PORT) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message:
-          "PORT is required in production — set it explicitly (e.g. PORT=3000)",
-        path: ["PORT"],
-      });
-    }
-
-    if (!data.CORS_ORIGIN) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message:
-          "CORS_ORIGIN is required in production — set it to your frontend URL " +
-          "(e.g. https://app.example.com)",
-        path: ["CORS_ORIGIN"],
-      });
-    }
-
-    if (data.REDIS_URL === "redis://localhost:6379") {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message:
-          "REDIS_URL should be explicitly set in production " +
-          "(currently using localhost default)",
-        path: ["REDIS_URL"],
-      });
-    }
-  });
+// ⚠️ Validated BEFORE importing @repo/infrastructure so that if DATABASE_URL
+// or other required env vars are missing, we get a clear error message instead
+// of an obscure throw from drizzle.client.ts.
 
 const envResult = envSchema.safeParse(process.env);
 
@@ -66,6 +18,15 @@ if (!envResult.success) {
 }
 
 const env = envResult.data;
+
+// ── Dynamically import infrastructure AFTER env validation passes ─────────
+// Static import of @repo/infrastructure would eagerly load drizzle.client.ts
+// which throws if DATABASE_URL is missing. By deferring to a dynamic import,
+// we guarantee envSchema fails first with a helpful message.
+
+const { createAppContainer, PinoLogger, startOutboxProcessor } = await import(
+  "@repo/infrastructure"
+);
 
 // ── Startup banner helpers ──────────────────────────────────────────────────
 
@@ -81,35 +42,47 @@ const port = env.PORT ?? 3000;
 
 // ── Bootstrap ───────────────────────────────────────────────────────────────
 
-const container = createAppContainer();
-const app = createServer(container);
+const logger = new PinoLogger();
+const container = createAppContainer(undefined, logger);
+const app = createServer(container, logger);
 
 // 🚀 Start background workers
-startOutboxProcessor(container, Number(process.env.OUTBOX_INTERVAL ?? 5000));
+startOutboxProcessor(
+  container,
+  Number(process.env.OUTBOX_INTERVAL ?? 5000),
+  logger,
+);
 
 app.listen(port, () => {
-  console.log(`
-  ┌─────────────────────────────────────────────┐
-  │                                             │
-  │   \uD83D\uDE80 Monorepo API running                   │
-  │                                             │
-  │   HTTP    \u2192  http://localhost:${port}          │
-  │   Docs    \u2192  http://localhost:${port}/docs     │
-  │   CORS    \u2192  ${corsOriginString.padEnd(32)}│
-  │   NODE_ENV \u2192 ${env.NODE_ENV.padEnd(32)}│
-  │                                             │
-  └─────────────────────────────────────────────┘
-`);
+  // Register HTTP server for cleanup — stop accepting new connections
+  // FIRST during shutdown, before internal resources are torn down.
+  container.registerDisposable({
+    disconnect: async () => {
+      await app.server?.stop();
+    },
+  });
+
+  logger.info("🚀 Monorepo running");
 });
 
 // ─── Graceful Shutdown ───────────────────────────────────────────────────────
+// container.disconnect() handles all cleanup in order:
+//   1. HTTP server stops (accept no new connections)
+//   2. Outbox processor stops (no new publishes)
+//   3. Redis event bus disconnects
+//   4. Database pool closes
 
 const shutdown = async (signal: string) => {
-  console.log(`\nReceived ${signal}. Shutting down gracefully...`);
-  await stopOutboxProcessor();
-  await container.disconnect();
-  await pool.end();
-  console.log("Database pool closed. Exiting.");
+  logger.info(`Received ${signal}. Shutting down gracefully...`);
+  const result = await container.disconnect();
+  if (result.errors.length > 0) {
+    logger.error("Shutdown completed with errors:");
+    for (const err of result.errors) {
+      logger.error(`  • ${err.message}`);
+    }
+  } else {
+    logger.info("Cleanup complete. Exiting.");
+  }
   process.exit(0);
 };
 

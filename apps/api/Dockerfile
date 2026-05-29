@@ -11,6 +11,7 @@ COPY package.json bun.lock turbo.json ./
 COPY apps/api ./apps/api
 
 # Copy workspace packages required by the API
+COPY packages/config        ./packages/config
 COPY packages/domain        ./packages/domain
 COPY packages/shared        ./packages/shared
 COPY packages/application   ./packages/application

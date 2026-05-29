@@ -66,6 +66,8 @@ services:
       NODE_ENV: production
       # Port exposed inside the container (default 3000)
       PORT: ${PORT:-3000}
+      # Pino log level (trace, debug, info, warn, error, fatal)
+      LOG_LEVEL: ${LOG_LEVEL:-info}
       # Outbox polling interval
       OUTBOX_INTERVAL: ${OUTBOX_INTERVAL:-5000}
       # ⚠️ Core configs (DATABASE_URL, REDIS_URL, CORS_ORIGIN) berasal dari .env.production

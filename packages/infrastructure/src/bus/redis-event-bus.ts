@@ -2,7 +2,9 @@ import type { IEventBus, IExternalEventBus } from "@repo/application";
 import type { DomainEvent } from "@repo/domain";
 import {
   type AppError,
+  type IDisposable,
   InternalError,
+  type Logger,
   type Result,
   err,
   ok,
@@ -12,7 +14,9 @@ import { Redis } from "ioredis";
 /**
  * RedisEventBus — A distributed event bus implementation using Redis Pub/Sub.
  */
-export class RedisEventBus implements IEventBus, IExternalEventBus {
+export class RedisEventBus
+  implements IEventBus, IExternalEventBus, IDisposable
+{
   private readonly pubClient: Redis;
   private readonly subClient: Redis;
   private readonly handlers = new Map<
@@ -20,7 +24,10 @@ export class RedisEventBus implements IEventBus, IExternalEventBus {
     ((event: DomainEvent) => Promise<void>)[]
   >();
 
-  constructor(redisUrl: string) {
+  private readonly logger: Logger;
+
+  constructor(redisUrl: string, logger: Logger = console) {
+    this.logger = logger;
     this.pubClient = new Redis(redisUrl, {
       maxRetriesPerRequest: null,
     });
@@ -29,11 +36,11 @@ export class RedisEventBus implements IEventBus, IExternalEventBus {
     });
 
     this.pubClient.on("error", (error) => {
-      console.error("[RedisEventBus] Pub Client Error:", error);
+      this.logger.error("[RedisEventBus] Pub Client Error:", error);
     });
 
     this.subClient.on("error", (error) => {
-      console.error("[RedisEventBus] Sub Client Error:", error);
+      this.logger.error("[RedisEventBus] Sub Client Error:", error);
     });
 
     this.initRedisSubscription();
@@ -74,10 +81,10 @@ export class RedisEventBus implements IEventBus, IExternalEventBus {
 
     if (isNewChannel) {
       const channel = `events:${eventType}`;
-      console.log(`[RedisEventBus] 📡 Subscribing to channel: ${channel}`);
+      this.logger.info(`[RedisEventBus] Subscribing to channel: ${channel}`);
       this.subClient.subscribe(channel).catch((err) => {
-        console.error(
-          `[RedisEventBus] ❌ Failed to subscribe to channel ${channel}:`,
+        this.logger.error(
+          `[RedisEventBus] Failed to subscribe to channel ${channel}:`,
           err,
         );
       });
@@ -98,7 +105,7 @@ export class RedisEventBus implements IEventBus, IExternalEventBus {
 
         await Promise.allSettled(handlers.map((h) => h(event)));
       } catch (error) {
-        console.error(
+        this.logger.error(
           `[RedisEventBus] Error processing message from channel ${channel}:`,
           error,
         );
@@ -114,7 +121,7 @@ export class RedisEventBus implements IEventBus, IExternalEventBus {
 
     for (const result of results) {
       if (result.status === "rejected") {
-        console.error(
+        this.logger.error(
           "[RedisEventBus] Error during disconnect:",
           result.reason,
         );

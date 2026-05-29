@@ -1,22 +1,35 @@
 import type { DomainEvent } from "@repo/domain";
-import { isErr } from "@repo/shared";
+import { type Logger, isErr } from "@repo/shared";
 import { and, eq, isNull, lt, lte, or } from "drizzle-orm";
 import type { AppContainer } from "../container/app-container.ts";
-import { db } from "../database/drizzle.client.ts";
+import { db as defaultDb } from "../database/drizzle.client.ts";
+import type { DrizzleDB } from "../database/drizzle.client.ts";
 import { outbox } from "../database/schema.ts";
 
 const MAX_RETRIES = 10;
 
 /**
  * processOutbox — Polls the outbox table and publishes events to the external broker.
+ *
+ * @param container - AppContainer with externalEventBus
+ * @param logger - Logger instance
+ * @param customDb - Optional custom database instance.
+ *   Used by integration tests to provide an isolated pool that
+ *   won't be affected by the singleton pool's lifecycle.
+ *   Falls back to the default singleton db when omitted.
  */
-export async function processOutbox(container: AppContainer): Promise<void> {
+export async function processOutbox(
+  container: AppContainer,
+  logger: Logger = console,
+  customDb?: DrizzleDB,
+): Promise<void> {
   const externalEventBus = container.externalEventBus;
+  const theDb = customDb ?? defaultDb;
   const now = new Date();
 
   // 1. Fetch pending outbox messages that are new or due for retry
   // We exclude messages that have exceeded MAX_RETRIES (Dead Letter Queue behavior)
-  const rows = await db
+  const rows = await theDb
     .select()
     .from(outbox)
     .where(
@@ -29,8 +42,7 @@ export async function processOutbox(container: AppContainer): Promise<void> {
 
   if (rows.length === 0) return;
 
-  console.log(`[Outbox] 📦 Found ${rows.length} messages to process.`);
-
+  logger.info(`[Outbox] Found ${rows.length} messages to process.`);
   for (const row of rows) {
     try {
       const eventData = row.payload as Record<string, unknown>;
@@ -51,12 +63,12 @@ export async function processOutbox(container: AppContainer): Promise<void> {
         const delaySeconds = 2 ** Math.min(retryCount, 10) * 5;
         const nextRetryAt = new Date(Date.now() + delaySeconds * 1000);
 
-        console.error(
-          `[Outbox] ❌ Failed to publish event ${row.id} (retry #${retryCount}, next at ${nextRetryAt.toISOString()}):`,
+        logger.error(
+          `[Outbox] Failed to publish event ${row.id} (retry #${retryCount}, next at ${nextRetryAt.toISOString()}):`,
           result.error,
         );
 
-        await db
+        await theDb
           .update(outbox)
           .set({
             retryCount,
@@ -68,14 +80,14 @@ export async function processOutbox(container: AppContainer): Promise<void> {
       }
 
       // 3. Delete from outbox on success
-      await db.delete(outbox).where(eq(outbox.id, row.id));
+      await theDb.delete(outbox).where(eq(outbox.id, row.id));
     } catch (err) {
       const retryCount = row.retryCount + 1;
       const nextRetryAt = new Date(Date.now() + 60 * 1000); // Wait 1 minute on unexpected crash
 
-      console.error(`[Outbox] 💥 Unexpected error processing ${row.id}:`, err);
+      logger.error(`[Outbox] Unexpected error processing ${row.id}:`, err);
 
-      await db
+      await theDb
         .update(outbox)
         .set({
           retryCount,
@@ -93,20 +105,28 @@ let currentRun: Promise<void> | null = null;
 
 /**
  * startOutboxProcessor — Starts the outbox polling worker.
+ *
+ * @param container - AppContainer with externalEventBus
+ * @param intervalMs - Polling interval in milliseconds (default: 5000)
+ * @param logger - Logger instance
+ * @param customDb - Optional custom database instance.
+ *   Passed through to processOutbox for test isolation.
  */
 export function startOutboxProcessor(
   container: AppContainer,
   intervalMs = 5000,
+  logger: Logger = console,
+  customDb?: DrizzleDB,
 ): void {
   if (isRunning) return;
   isRunning = true;
 
-  console.log(`[Outbox] 🚀 Worker started (polling every ${intervalMs}ms)`);
+  logger.info(`[Outbox] Worker started (polling every ${intervalMs}ms)`);
 
   const run = async () => {
     if (!isRunning) return;
 
-    currentRun = processOutbox(container);
+    currentRun = processOutbox(container, logger, customDb);
     try {
       await currentRun;
     } finally {
@@ -125,7 +145,9 @@ export function startOutboxProcessor(
  * stopOutboxProcessor — Gracefully stops the outbox polling worker.
  * Waits for the current iteration to complete before returning.
  */
-export async function stopOutboxProcessor(): Promise<void> {
+export async function stopOutboxProcessor(
+  logger: Logger = console,
+): Promise<void> {
   isRunning = false;
 
   if (timer) {
@@ -134,9 +156,9 @@ export async function stopOutboxProcessor(): Promise<void> {
   }
 
   if (currentRun) {
-    console.log("[Outbox] ⏳ Waiting for current iteration to finish...");
+    logger.info("[Outbox] Waiting for current iteration to finish...");
     await currentRun;
   }
 
-  console.log("[Outbox] 🛑 Worker stopped.");
+  logger.info("[Outbox] Worker stopped.");
 }

@@ -68,8 +68,12 @@ bun install
 ### 3. Environment
 
 ```bash
+```bash
 cp .env.example .env
 # Edit DATABASE_URL in .env
+```
+
+> 📖 For detailed per-variable documentation (including `OUTBOX_INTERVAL`, `LOG_LEVEL`, and CORS origin examples), see [`apps/api/.env.example`](./apps/api/.env.example).
 ```
 
 ### 4. Database
@@ -197,6 +201,7 @@ Edit every variable — production fails fast with clear errors if any are missi
 | `POSTGRES_PASSWORD` | Optional | PostgreSQL password (default: `postgres`) |
 | `REDIS_PASSWORD` | Optional | Redis password (default: `superadmin`) |
 | `OUTBOX_INTERVAL` | Optional | Outbox polling interval in ms (default: `5000`) |
+| `LOG_LEVEL` | Optional | Pino log level: `trace`, `debug`, `info`, `warn`, `error`, `fatal` (default: `info`) |
 
 Example `.env.production`:
 

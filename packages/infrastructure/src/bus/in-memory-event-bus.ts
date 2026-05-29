@@ -1,6 +1,6 @@
 import type { IEventBus, IExternalEventBus } from "@repo/application";
 import type { DomainEvent } from "@repo/domain";
-import { type AppError, type Result, ok } from "@repo/shared";
+import { type AppError, type Logger, type Result, ok } from "@repo/shared";
 
 type EventHandler = (event: DomainEvent) => Promise<void>;
 
@@ -12,6 +12,11 @@ type EventHandler = (event: DomainEvent) => Promise<void>;
  */
 export class InMemoryEventBus implements IEventBus, IExternalEventBus {
   private readonly handlers = new Map<string, EventHandler[]>();
+  private readonly logger: Logger;
+
+  constructor(logger: Logger = console) {
+    this.logger = logger;
+  }
 
   subscribe(eventType: string, handler: EventHandler): void {
     const existing = this.handlers.get(eventType) ?? [];
@@ -24,7 +29,7 @@ export class InMemoryEventBus implements IEventBus, IExternalEventBus {
 
     const failures = results.filter((r) => r.status === "rejected");
     if (failures.length > 0) {
-      console.error(
+      this.logger.error(
         `Event bus: ${failures.length} handlers failed for event ${event.eventType}`,
       );
     }

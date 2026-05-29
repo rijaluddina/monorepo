@@ -124,6 +124,7 @@ describe("User mutation command handlers", () => {
       txContext,
     );
     expect(user.domainEvents).toEqual([]);
+    expect(eventBus.publishAll).toHaveBeenCalled();
   });
 
   test("change email should reject duplicate email before mutating", async () => {
@@ -150,6 +151,7 @@ describe("User mutation command handlers", () => {
     if (result.isErr()) expect(result.error).toBeInstanceOf(ConflictError);
     expect(userRepository.save).not.toHaveBeenCalled();
     expect(eventStore.append).not.toHaveBeenCalled();
+    expect(eventBus.publishAll).not.toHaveBeenCalled();
   });
 
   test("change email should update and append the email changed event", async () => {
@@ -179,6 +181,7 @@ describe("User mutation command handlers", () => {
       [expect.any(UserEmailChangedEvent)],
       txContext,
     );
+    expect(eventBus.publishAll).toHaveBeenCalled();
   });
 
   test("change role should update and append the role changed event", async () => {
@@ -205,6 +208,7 @@ describe("User mutation command handlers", () => {
       [expect.any(UserRoleChangedEvent)],
       txContext,
     );
+    expect(eventBus.publishAll).toHaveBeenCalled();
   });
 
   test("mutation handlers should return not found when user is missing", async () => {
@@ -224,6 +228,7 @@ describe("User mutation command handlers", () => {
     expect(result.isErr()).toBe(true);
     if (result.isErr()) expect(result.error).toBeInstanceOf(NotFoundError);
     expect(unitOfWork.run).not.toHaveBeenCalled();
+    expect(eventBus.publishAll).not.toHaveBeenCalled();
   });
 
   test("mutation handlers should stop when append fails", async () => {
@@ -248,6 +253,7 @@ describe("User mutation command handlers", () => {
 
     expect(result.isErr()).toBe(true);
     expect(outboxPort.insert).not.toHaveBeenCalled();
+    expect(eventBus.publishAll).not.toHaveBeenCalled();
   });
 
   test("delete should append and publish UserDeletedEvent", async () => {
@@ -272,5 +278,6 @@ describe("User mutation command handlers", () => {
       txContext,
     );
     expect(userRepository.save).toHaveBeenCalled();
+    expect(eventBus.publishAll).toHaveBeenCalled();
   });
 });

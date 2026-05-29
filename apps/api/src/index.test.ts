@@ -724,7 +724,9 @@ describe("API Integration Tests", () => {
 
   describe("Graceful Shutdown", () => {
     it("should call container.disconnect() during shutdown sequence", async () => {
-      const disconnectSpy = mock(async () => {});
+      const disconnectSpy = mock(
+        async (): Promise<AggregateError> => new AggregateError([]),
+      );
       const originalDisconnect = container.disconnect;
       container.disconnect = disconnectSpy;
 
@@ -740,10 +742,12 @@ describe("API Integration Tests", () => {
       }
     });
 
-    it("should resolve disconnect as no-op with InMemoryEventBus", async () => {
+    it("should resolve disconnect as empty errors array with InMemoryEventBus", async () => {
       // In test mode, createAppContainer uses InMemoryEventBus which
       // doesn't have a disconnect() method — the duck-type check skips it.
-      await expect(container.disconnect()).resolves.toBeUndefined();
+      const result = await container.disconnect();
+      expect(result).toBeInstanceOf(AggregateError);
+      expect((result as AggregateError).errors).toEqual([]);
     });
   });
 });

@@ -1,15 +1,43 @@
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import type { AppContainer } from "@repo/infrastructure";
+import type { Logger } from "@repo/shared";
 import { Elysia } from "elysia";
 import { healthRoutes } from "./routes/health.routes";
 import { userRoutes } from "./routes/user.routes";
 
-interface AppErrorShape {
+export interface AppErrorShape {
   statusCode?: number;
   status?: number;
   code?: string;
   message: string;
+}
+
+/**
+ * Global error handler used by createServer().
+ *
+ * Exported separately so integration tests can verify structured logging
+ * (PinoLogger → {err} serialization) without needing a running Elysia
+ * instance or database.
+ */
+export function handleServerError(
+  logger: Logger,
+  error: unknown,
+  set: { status?: number | string },
+): { error: { code: string; message: string } } {
+  const msg = "API Error Captured:";
+  logger.error(msg, error);
+
+  const appError = error as AppErrorShape;
+  const status = appError.statusCode ?? appError.status ?? 500;
+  set.status = status;
+
+  return {
+    error: {
+      code: appError.code ?? "INTERNAL_ERROR",
+      message: status === 500 ? "Internal server error" : appError.message,
+    },
+  };
 }
 
 /**
@@ -56,7 +84,10 @@ function getCorsOrigin(): string | RegExp | Array<string | RegExp> {
 // Export for use in startup logs / production guard in index.ts
 export { getCorsOrigin };
 
-export function createServer(container: AppContainer) {
+export function createServer(
+  container: AppContainer,
+  logger: Logger = console,
+) {
   const app = new Elysia()
     // ── Global plugins ──────────────────────────────────────────────────
     .use(
@@ -92,18 +123,7 @@ export function createServer(container: AppContainer) {
     .group("/api/v1", (app) => app.use(userRoutes(container)))
 
     // ── Global error handler ────────────────────────────────────────────
-    .onError(({ error, set }) => {
-      console.error("API Error Captured:", error);
-      const appError = error as AppErrorShape;
-      const status = appError.statusCode ?? appError.status ?? 500;
-      set.status = status;
-      return {
-        error: {
-          code: appError.code ?? "INTERNAL_ERROR",
-          message: status === 500 ? "Internal server error" : appError.message,
-        },
-      };
-    });
+    .onError(({ error, set }) => handleServerError(logger, error, set));
 
   return app;
 }
