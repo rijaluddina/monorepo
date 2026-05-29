@@ -21,13 +21,14 @@ const apiDir = new URL("..", import.meta.url).pathname;
 
 describe("startup validation order", () => {
   it("should fail with env validation error before loading infrastructure when DATABASE_URL is missing", () => {
-    // Build env without DATABASE_URL so envSchema validation fails
-    const env: Record<string, string> = {};
-    for (const [name, value] of Object.entries(process.env)) {
-      if (name !== "DATABASE_URL" && value !== undefined) {
-        env[name] = value;
-      }
-    }
+    // Build env with DATABASE_URL set to empty string so envSchema validation fails
+    // Note: We explicitly set DATABASE_URL="" instead of filtering it out because
+    // Bun's spawnSync may merge env with the parent process, causing DATABASE_URL
+    // to leak through even when excluded from the passed env object.
+    const env: Record<string, string> = {
+      ...(process.env as Record<string, string>),
+      DATABASE_URL: "",
+    };
 
     const result = spawnSync(["bun", "src/index.ts"], {
       cwd: apiDir,
