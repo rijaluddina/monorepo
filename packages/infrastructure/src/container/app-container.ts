@@ -181,7 +181,7 @@ export function createAppContainer(
     "UserEmailChanged",
     "UserRoleChanged",
     "UserDeleted",
-    "USER_RESTORED",
+    "UserRestored",
   ] as const;
   const eventLogger = new EventLogger(eventBus, logger, eventTypes);
   eventLogger.register();

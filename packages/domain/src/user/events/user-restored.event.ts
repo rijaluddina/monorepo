@@ -1,6 +1,6 @@
 import type { DomainEvent } from "../../shared/domain-event.ts";
 
-export const USER_RESTORED = "USER_RESTORED";
+export const USER_RESTORED = "UserRestored" as const;
 
 export class UserRestoredEvent implements DomainEvent {
   public readonly eventType = USER_RESTORED;

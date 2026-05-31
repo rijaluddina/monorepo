@@ -229,7 +229,7 @@ describe("E2E: API + Database + Outbox", () => {
     expect(eventTypes).toContain("UserDeactivated");
     expect(eventTypes).toContain("UserActivated");
     expect(eventTypes).toContain("UserDeleted");
-    expect(eventTypes).toContain("USER_RESTORED");
+    expect(eventTypes).toContain("UserRestored");
   });
 
   // ── Outbox Processing — with custom pool via test helper ───────────────

@@ -1,6 +1,12 @@
 import type { IEventBus, IExternalEventBus } from "@repo/application";
 import type { DomainEvent } from "@repo/domain";
-import { type AppError, type Logger, type Result, ok } from "@repo/shared";
+import {
+  type AppError,
+  type IDisposable,
+  type Logger,
+  type Result,
+  ok,
+} from "@repo/shared";
 
 type EventHandler = (event: DomainEvent) => Promise<void>;
 
@@ -10,12 +16,18 @@ type EventHandler = (event: DomainEvent) => Promise<void>;
  * Replace with Redis Streams / RabbitMQ / Kafka adapter for production
  * distributed event-driven architectures.
  */
-export class InMemoryEventBus implements IEventBus, IExternalEventBus {
+export class InMemoryEventBus
+  implements IEventBus, IExternalEventBus, IDisposable
+{
   private readonly handlers = new Map<string, EventHandler[]>();
   private readonly logger: Logger;
 
   constructor(logger: Logger = console) {
     this.logger = logger;
+  }
+
+  async disconnect(): Promise<void> {
+    // no-op: in-memory bus has no external resources to clean up
   }
 
   subscribe(eventType: string, handler: EventHandler): void {
