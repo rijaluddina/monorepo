@@ -74,8 +74,6 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       # Outbox polling interval
       OUTBOX_INTERVAL: ${OUTBOX_INTERVAL:-5000}
-      # ⚠️ Core configs (DATABASE_URL, REDIS_URL, CORS_ORIGIN) berasal dari .env.production
-      # JANGAN set di sini — nanti meng-override env_file!
     ports:
       - "${API_PORT:-3000}:3000"
     depends_on:
@@ -122,8 +120,6 @@ services:
       target: production
     env_file:
       - .env.production
-    # DATABASE_URL, REDIS_URL dll berasal dari .env.production
-    # (tidak perlu environment section — sudah di-pass via env_file)
     entrypoint: ["bun", "run", "/app/migrate-dist/migrate-runner.js"]
     depends_on:
       postgres:

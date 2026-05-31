@@ -24,6 +24,7 @@ export class RedisEventBus
     ((event: DomainEvent) => Promise<void>)[]
   >();
 
+  private disconnected = false;
   private readonly logger: Logger;
 
   constructor(redisUrl: string, logger: Logger = console) {
@@ -114,17 +115,21 @@ export class RedisEventBus
   }
 
   async disconnect(): Promise<void> {
-    const results = await Promise.allSettled([
-      this.pubClient.quit(),
-      this.subClient.quit(),
-    ]);
+    if (this.disconnected) return;
+    this.disconnected = true;
 
-    for (const result of results) {
-      if (result.status === "rejected") {
-        this.logger.error(
-          "[RedisEventBus] Error during disconnect:",
-          result.reason,
-        );
+    for (const client of [this.pubClient, this.subClient]) {
+      try {
+        await client.quit();
+      } catch (error) {
+        // Skip benign "Connection is closed" errors (happens when quit()
+        // is called before ioredis finishes its internal cleanup)
+        if (
+          error instanceof Error &&
+          error.message.includes("Connection is closed")
+        )
+          continue;
+        this.logger.error("[RedisEventBus] Error during disconnect:", error);
       }
     }
   }

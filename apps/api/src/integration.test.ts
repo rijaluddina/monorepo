@@ -276,27 +276,34 @@ describe("E2E: API + Database + Outbox", () => {
     });
 
     it("should increment retry count when publish fails", async () => {
-      const mockBus = createMockExternalBus(err(new Error("Network error")));
+      const originalError = console.error;
+      console.error = () => {};
 
-      const { body: user } = await api.createUser();
-      await sleep(50);
+      try {
+        const mockBus = createMockExternalBus(err(new Error("Network error")));
 
-      // Process outbox with failing mock
-      await processOutboxWithDb({ externalEventBus: mockBus } as never, db);
+        const { body: user } = await api.createUser();
+        await sleep(50);
 
-      // Verify retry count incremented
-      const rows = await db
-        .select()
-        .from(outbox)
-        .where(eq(outbox.aggregateId, user.id));
-      expect(rows.length).toBeGreaterThanOrEqual(1);
-      expect(rows[0]?.retryCount).toBe(1);
-      expect(rows[0]?.lastError).toBe("Network error");
-      expect(rows[0]?.nextRetryAt).toBeDefined();
+        // Process outbox with failing mock
+        await processOutboxWithDb({ externalEventBus: mockBus } as never, db);
 
-      // Clean up
-      if (rows[0]) {
-        await db.delete(outbox).where(eq(outbox.id, rows[0].id));
+        // Verify retry count incremented
+        const rows = await db
+          .select()
+          .from(outbox)
+          .where(eq(outbox.aggregateId, user.id));
+        expect(rows.length).toBeGreaterThanOrEqual(1);
+        expect(rows[0]?.retryCount).toBe(1);
+        expect(rows[0]?.lastError).toBe("Network error");
+        expect(rows[0]?.nextRetryAt).toBeDefined();
+
+        // Clean up
+        if (rows[0]) {
+          await db.delete(outbox).where(eq(outbox.id, rows[0].id));
+        }
+      } finally {
+        console.error = originalError;
       }
     });
 

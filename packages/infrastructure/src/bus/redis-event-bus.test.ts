@@ -70,13 +70,15 @@ describe("RedisEventBus", () => {
       expect(mockQuit).toHaveBeenCalledTimes(2);
     });
 
-    it("should resolve successfully even if called multiple times", async () => {
+    it("should be idempotent when called multiple times", async () => {
       const bus = new RedisEventBus("redis://localhost:6379");
 
       await bus.disconnect();
       await expect(bus.disconnect()).resolves.toBeUndefined();
+      await expect(bus.disconnect()).resolves.toBeUndefined();
 
-      expect(mockQuit).toHaveBeenCalledTimes(4);
+      // quit() should only be called for the first disconnect (2 clients)
+      expect(mockQuit).toHaveBeenCalledTimes(2);
     });
 
     it("should not reject when quit() throws — logs error instead", async () => {

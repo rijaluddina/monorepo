@@ -114,7 +114,7 @@ let currentRun: Promise<void> | null = null;
  */
 export function startOutboxProcessor(
   container: AppContainer,
-  intervalMs = 5000,
+  intervalMs = Number(process.env.OUTBOX_INTERVAL ?? 5000),
   logger: Logger = console,
   customDb?: DrizzleDB,
 ): void {

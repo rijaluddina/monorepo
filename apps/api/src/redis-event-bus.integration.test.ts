@@ -22,6 +22,14 @@
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { RedisEventBus } from "@repo/infrastructure";
 
+if (!process.env.REDIS_URL) {
+  try {
+    const text = await Bun.file("../../.env").text();
+    const match = text.match(/^REDIS_URL="?([^"\n]+)"?$/m);
+    if (match) process.env.REDIS_URL = match[1];
+  } catch {}
+}
+
 const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379";
 
 /**
@@ -35,6 +43,7 @@ async function isRedisReachable(url: string): Promise<boolean> {
       maxRetriesPerRequest: 1,
       retryStrategy: () => null,
       lazyConnect: true,
+      connectTimeout: 5000,
     });
     await client.connect();
     await client.ping();
@@ -78,12 +87,7 @@ describe("RedisEventBus — Integration", () => {
   });
 
   afterEach(async () => {
-    // Disconnect per-test bus to prevent client leaks
-    try {
-      await bus?.disconnect();
-    } catch {
-      // ignore cleanup errors
-    }
+    await bus?.disconnect();
   });
 
   // ── Publish → Subscribe ───────────────────────────────────────────────

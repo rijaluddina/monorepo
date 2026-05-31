@@ -9,7 +9,7 @@
     "dev": "bun run --watch --env-file=../../.env src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
     "start": "bun run dist/index.js",
-    "test": "bun test",
+    "test": "bun test --env-file=../../.env",
     "typecheck": "tsc --noEmit",
     "lint": "biome check ./src",
     "clean": "rm -rf dist",
@@ -32,6 +32,7 @@
     "@repo/typescript-config": "*",
     "@types/pg": "^8.20.0",
     "bun-types": "^1.3.13",
+    "ioredis": "^5.10.1",
     "pg": "^8.21.0",
     "pino": "^10.3.1",
     "typescript": "^5.7.0"
