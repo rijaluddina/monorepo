@@ -12,6 +12,9 @@ export type { IOutboxPort } from "./shared/ports/outbox.port.ts";
 
 export type { IUnitOfWork } from "./shared/unit-of-work.port.ts";
 
+// Cache port
+export type { ICache } from "./shared/cache.port.ts";
+
 // User — ports
 export type { IUserRepository } from "./user/ports/user-repository.port.ts";
 

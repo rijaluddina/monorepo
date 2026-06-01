@@ -6,6 +6,19 @@ import type { IUserRepository } from "../ports/user-repository.port.ts";
 import { mapUserToDTO } from "../user.mapper.ts";
 import type { GetUsersQuery } from "./get-users.query.ts";
 
+/**
+ * GetUsersQueryHandler — Paginated user list.
+ *
+ * Intentionally NOT cached on the server side because:
+ *   - List queries read from the projection table directly (fast DB query)
+ *   - Cache invalidation for paginated lists with search is complex
+ *     (wildcard key deletion across many combinations)
+ *   - The FE handles its own caching via TanStack React Query with
+ *     automatic invalidation after every mutation
+ *
+ * Single-user queries (GetUserByIdQueryHandler) ARE cached because
+ * findById() requires expensive event store reconstitution.
+ */
 export class GetUsersQueryHandler
   implements QueryHandler<GetUsersQuery, PaginatedResult<UserDTO>>
 {

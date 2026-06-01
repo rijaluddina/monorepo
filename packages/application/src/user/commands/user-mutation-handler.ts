@@ -1,6 +1,7 @@
 import { UniqueId, type User } from "@repo/domain";
 import { NotFoundError, err, isErr, ok } from "@repo/shared";
 import type { AppError, Result } from "@repo/shared";
+import type { ICache } from "../../shared/cache.port.ts";
 import type { IEventBus } from "../../shared/event-bus.port.ts";
 import type { IEventStore } from "../../shared/event-store.port.ts";
 import type { IOutboxPort } from "../../shared/ports/outbox.port.ts";
@@ -9,6 +10,8 @@ import type { IUserRepository } from "../ports/user-repository.port.ts";
 
 type UserMutation = (user: User) => Result<void, AppError> | void;
 
+const CACHE_KEY_PREFIX = "user";
+
 export abstract class UserMutationHandler {
   constructor(
     protected readonly userRepository: IUserRepository,
@@ -16,6 +19,7 @@ export abstract class UserMutationHandler {
     protected readonly eventBus: IEventBus,
     protected readonly outboxPort: IOutboxPort,
     protected readonly unitOfWork: IUnitOfWork,
+    protected readonly cache?: ICache,
   ) {}
 
   protected async mutateUser(
@@ -86,6 +90,10 @@ export abstract class UserMutationHandler {
     if (isErr(publishResult)) {
       return err(publishResult.error);
     }
+
+    // 5. Invalidate cache for this user so the next read fetches fresh data
+    // Best-effort — cache errors are already caught internally by RedisCache.
+    await this.cache?.del(`${CACHE_KEY_PREFIX}:${user.id.value}`);
 
     user.clearEvents();
 

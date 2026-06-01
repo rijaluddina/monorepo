@@ -1,4 +1,4 @@
-export { db, pool } from "./database/drizzle.client.ts";
+export { getDb, getPool } from "./database/drizzle.client.ts";
 export { DrizzleUnitOfWork } from "./database/drizzle-unit-of-work.ts";
 export * from "./database/schema.ts";
 export { DrizzleUserRepository } from "./repositories/drizzle-user.repository.ts";
@@ -9,6 +9,9 @@ export { InMemoryQueryBus } from "./bus/in-memory-query-bus.ts";
 export { InMemoryEventBus } from "./bus/in-memory-event-bus.ts";
 export { RedisEventBus } from "./bus/redis-event-bus.ts";
 export { ConsoleExternalEventBus } from "./bus/console-external-event-bus.ts";
+export { getRedisClients } from "./redis/redis.client.ts";
+export { RedisCache } from "./cache/redis.cache.ts";
+export { NoOpCache } from "./cache/noop.cache.ts";
 export { EventLogger } from "./subscribers/event-logger.ts";
 export type { AppContainer } from "./container/app-container.ts";
 export { createAppContainer } from "./container/app-container.ts";

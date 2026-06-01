@@ -7,6 +7,7 @@ import {
   DeleteUserCommandHandler,
   GetUserByIdQueryHandler,
   GetUsersQueryHandler,
+  type ICache,
   type ICommandBus,
   type IQueryBus,
   type IUnitOfWork,
@@ -22,11 +23,14 @@ import { InMemoryCommandBus } from "../bus/in-memory-command-bus.ts";
 import { InMemoryEventBus } from "../bus/in-memory-event-bus.ts";
 import { InMemoryQueryBus } from "../bus/in-memory-query-bus.ts";
 import { RedisEventBus } from "../bus/redis-event-bus.ts";
+import { NoOpCache } from "../cache/noop.cache.ts";
+import { RedisCache } from "../cache/redis.cache.ts";
 import { DrizzleUnitOfWork } from "../database/drizzle-unit-of-work.ts";
-import { db as defaultDb, pool } from "../database/drizzle.client.ts";
+import { getDb, getPool } from "../database/drizzle.client.ts";
 import type { DrizzleDB } from "../database/drizzle.client.ts";
 import { DrizzleEventStore } from "../event-store/drizzle-event-store.ts";
 import { stopOutboxProcessor } from "../outbox/processor.ts";
+import { getRedisClients } from "../redis/redis.client.ts";
 import { DrizzleOutboxRepository } from "../repositories/drizzle-outbox.repository.ts";
 import { DrizzleUserRepository } from "../repositories/drizzle-user.repository.ts";
 import { EventLogger } from "../subscribers/event-logger.ts";
@@ -45,7 +49,7 @@ import { EventLogger } from "../subscribers/event-logger.ts";
 const DEFAULT_DISCONNECT_TIMEOUT_MS = 30_000;
 
 export function createAppContainer(
-  db: DrizzleDB = defaultDb,
+  db: DrizzleDB = getDb(),
   logger: Logger = new ConsoleLogger(),
   disconnectTimeoutMs: number = DEFAULT_DISCONNECT_TIMEOUT_MS,
 ) {
@@ -64,13 +68,17 @@ export function createAppContainer(
   // overhead for local subscribers.
   const eventBus = new InMemoryEventBus(logger);
 
+  // Query result cache — Redis in production, NoOp in test mode
+  const cache: ICache =
+    process.env.NODE_ENV === "test" ? new NoOpCache() : new RedisCache(logger);
+
   // External event bus (distributed) — publishes to other services via
   // Redis Pub/Sub. The outbox processor uses this for reliable delivery.
-  const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+  // In test mode we use InMemoryEventBus to avoid requiring Redis.
   const externalEventBus =
     process.env.NODE_ENV === "test"
       ? new InMemoryEventBus(logger)
-      : new RedisEventBus(redisUrl, logger);
+      : new RedisEventBus(getRedisClients(), logger);
 
   // Register externalEventBus for cleanup if it implements IDisposable
   if (isDisposable(externalEventBus)) {
@@ -88,7 +96,7 @@ export function createAppContainer(
   // Closed last — all other cleanup runs before the DB is unavailable.
   disposables.push({
     name: "database pool",
-    disconnect: () => pool.end(),
+    disconnect: () => getPool().end(),
   });
 
   const commandBus: ICommandBus = new InMemoryCommandBus();
@@ -104,7 +112,7 @@ export function createAppContainer(
     unitOfWork,
   );
   const getUsersHandler = new GetUsersQueryHandler(userRepository);
-  const getUserByIdHandler = new GetUserByIdQueryHandler(userRepository);
+  const getUserByIdHandler = new GetUserByIdQueryHandler(userRepository, cache);
 
   // ── Register handlers on buses ──────────────────────────────────────
   commandBus.register("CreateUserCommand", createUserHandler);
@@ -116,6 +124,7 @@ export function createAppContainer(
       eventBus,
       outboxRepository,
       unitOfWork,
+      cache,
     ),
   );
   commandBus.register(
@@ -126,6 +135,7 @@ export function createAppContainer(
       eventBus,
       outboxRepository,
       unitOfWork,
+      cache,
     ),
   );
   commandBus.register(
@@ -136,6 +146,7 @@ export function createAppContainer(
       eventBus,
       outboxRepository,
       unitOfWork,
+      cache,
     ),
   );
   commandBus.register(
@@ -146,6 +157,7 @@ export function createAppContainer(
       eventBus,
       outboxRepository,
       unitOfWork,
+      cache,
     ),
   );
   commandBus.register(
@@ -156,6 +168,7 @@ export function createAppContainer(
       eventBus,
       outboxRepository,
       unitOfWork,
+      cache,
     ),
   );
   commandBus.register(
@@ -166,6 +179,7 @@ export function createAppContainer(
       eventBus,
       outboxRepository,
       unitOfWork,
+      cache,
     ),
   );
 

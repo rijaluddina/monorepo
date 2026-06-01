@@ -7,10 +7,9 @@ import { GetUsersQuery } from "./get-users.query.ts";
 describe("GetUsersQueryHandler", () => {
   const mockUserRepository = {
     findAll: mock(),
-  };
+  } as const;
 
-  // biome-ignore lint/suspicious/noExplicitAny: mock repository for test
-  const handler = new GetUsersQueryHandler(mockUserRepository as any);
+  const handler = new GetUsersQueryHandler(mockUserRepository as never);
 
   it("should return paginated users", async () => {
     const user = User.reconstitute(

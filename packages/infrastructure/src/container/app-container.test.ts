@@ -19,68 +19,68 @@ import { MockDisposable, MockLogger } from "@repo/shared/testing";
 // process-wide and would break processor.test.ts.
 const mockPoolEnd = mock(async () => {});
 
-// Mock database module to avoid needing a real PostgreSQL connection.
-// The mock provides a minimal Drizzle-like db object that all infrastructure
-// classes (repositories, event store, outbox, unit of work) use internally.
-// Includes pool with mocked .end() for shutdown testing.
-mock.module("../database/drizzle.client.ts", () => ({
-  db: {
-    query: {
-      users: {
-        findFirst: mock(async () => undefined),
-        findMany: mock(async () => []),
-      },
-      eventStore: {
-        findMany: mock(async () => []),
-      },
+// Shared mock DB object that getDb() will return.
+const mockDb = {
+  query: {
+    users: {
+      findFirst: mock(async () => undefined),
+      findMany: mock(async () => []),
     },
-    select: mock(() => ({
-      from: mock(() => ({
-        where: mock(() => ({
-          limit: mock(async () => [{ value: 0 }]),
-        })),
+    eventStore: {
+      findMany: mock(async () => []),
+    },
+  },
+  select: mock(() => ({
+    from: mock(() => ({
+      where: mock(() => ({
+        limit: mock(async () => [{ value: 0 }]),
       })),
     })),
-    insert: mock(() => ({
-      values: mock(async () => ({ rowCount: 1 })),
-    })),
-    update: mock(() => ({
-      set: mock(() => ({
-        where: mock(async () => ({ rowCount: 1 })),
-      })),
-    })),
-    delete: mock(() => ({
+  })),
+  insert: mock(() => ({
+    values: mock(async () => ({ rowCount: 1 })),
+  })),
+  update: mock(() => ({
+    set: mock(() => ({
       where: mock(async () => ({ rowCount: 1 })),
     })),
-    transaction: mock(async (fn: (tx: Record<string, unknown>) => unknown) => {
-      const tx = {
-        query: {
-          users: {
-            findFirst: mock(async () => undefined),
-            findMany: mock(async () => []),
-          },
-          eventStore: {
-            findMany: mock(async () => []),
-          },
+  })),
+  delete: mock(() => ({
+    where: mock(async () => ({ rowCount: 1 })),
+  })),
+  transaction: mock(async (fn: (tx: Record<string, unknown>) => unknown) => {
+    const tx = {
+      query: {
+        users: {
+          findFirst: mock(async () => undefined),
+          findMany: mock(async () => []),
         },
-        insert: mock(() => ({
-          values: mock(async () => ({ rowCount: 1 })),
+        eventStore: {
+          findMany: mock(async () => []),
+        },
+      },
+      insert: mock(() => ({
+        values: mock(async () => ({ rowCount: 1 })),
+      })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(async () => ({ rowCount: 1 })),
         })),
-        update: mock(() => ({
-          set: mock(() => ({
-            where: mock(async () => ({ rowCount: 1 })),
-          })),
-        })),
-      };
-      return fn(tx);
-    }),
-  },
-  pool: {
+      })),
+    };
+    return fn(tx);
+  }),
+};
+
+// Mock database module to avoid needing a real PostgreSQL connection.
+mock.module("../database/drizzle.client.ts", () => ({
+  getDb: () => mockDb,
+  getPool: () => ({
     end: mockPoolEnd,
     totalCount: 0,
     idleCount: 0,
     waitingCount: 0,
-  },
+  }),
 }));
 
 // ─── Mock for RedisEventBus ─────────────────────────────────────────────
@@ -109,6 +109,17 @@ mock.module("../bus/redis-event-bus.ts", () => ({
       };
     }
   },
+}));
+
+// ─── Mock for Redis clients ─────────────────────────────────────────────
+// Prevents real Redis connections in non-test disconnect tests.
+// getRedisClients() is only called when NODE_ENV != "test".
+// The mocked RedisEventBus constructor ignores the clients entirely.
+mock.module("../redis/redis.client.ts", () => ({
+  getRedisClients: () => ({
+    pubClient: { on: () => {} } as never,
+    subClient: { on: () => {} } as never,
+  }),
 }));
 
 import { createAppContainer } from "./app-container.ts";
