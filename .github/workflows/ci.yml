@@ -50,4 +50,5 @@ jobs:
         run: bun run test
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/db
+          NODE_ENV: test
           REDIS_URL: redis://localhost:6379
