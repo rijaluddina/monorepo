@@ -1,9 +1,11 @@
 import { User } from "@repo/domain";
-import { db, pool } from "./drizzle.client.ts";
+import { getDb, getPool } from "./drizzle.client.ts";
 import { eventStore, users as userTable } from "./schema.ts";
 
 async function seed() {
   console.log("🌱 Seeding database...");
+
+  const db = getDb();
 
   // Clean slate
   await db.delete(eventStore);
@@ -67,7 +69,7 @@ async function seed() {
   }
 
   console.log("✅ Seed complete.");
-  await pool.end();
+  await getPool().end();
 }
 
 seed().catch((e) => {

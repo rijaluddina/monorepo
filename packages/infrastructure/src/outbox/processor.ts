@@ -2,7 +2,7 @@ import type { DomainEvent } from "@repo/domain";
 import { type Logger, isErr } from "@repo/shared";
 import { and, eq, isNull, lt, lte, or } from "drizzle-orm";
 import type { AppContainer } from "../container/app-container.ts";
-import { db as defaultDb } from "../database/drizzle.client.ts";
+import { getDb } from "../database/drizzle.client.ts";
 import type { DrizzleDB } from "../database/drizzle.client.ts";
 import { outbox } from "../database/schema.ts";
 
@@ -24,7 +24,7 @@ export async function processOutbox(
   customDb?: DrizzleDB,
 ): Promise<void> {
   const externalEventBus = container.externalEventBus;
-  const theDb = customDb ?? defaultDb;
+  const theDb = customDb ?? getDb();
   const now = new Date();
 
   // 1. Fetch pending outbox messages that are new or due for retry

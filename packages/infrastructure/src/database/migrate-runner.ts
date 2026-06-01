@@ -1,14 +1,14 @@
 import path from "node:path";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { db, pool } from "./drizzle.client.ts";
+import { getDb, getPool } from "./drizzle.client.ts";
 
 const migrationsFolder = path.resolve(process.cwd(), "drizzle");
 
 async function main() {
   console.log("[migrate] Running database migrations...");
-  await migrate(db, { migrationsFolder });
+  await migrate(getDb(), { migrationsFolder });
   console.log("[migrate] Migrations complete.");
-  await pool.end();
+  await getPool().end();
 }
 
 main().catch((err) => {

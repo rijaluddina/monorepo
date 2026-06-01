@@ -9,32 +9,36 @@ import {
 } from "bun:test";
 import { err, ok } from "@repo/shared";
 import type { AppContainer } from "../container/app-container.ts";
-import { db } from "../database/drizzle.client.ts";
 import { processOutbox } from "./processor.ts";
 
 const originalLog = console.log;
 const originalError = console.error;
 
-// We mock the database calls.
-mock.module("../database/drizzle.client.ts", () => ({
-  db: {
-    select: mock(() => ({
-      from: mock(() => ({
-        where: mock(() => ({
-          limit: mock(async () => []),
-        })),
+// Shared mock DB object that getDb() will return.
+// Defined outside mock.module so tests can reference it directly.
+const mockDb = {
+  select: mock(() => ({
+    from: mock(() => ({
+      where: mock(() => ({
         limit: mock(async () => []),
       })),
+      limit: mock(async () => []),
     })),
-    delete: mock(() => ({
+  })),
+  delete: mock(() => ({
+    where: mock(async () => ({ rowCount: 1 })),
+  })),
+  update: mock(() => ({
+    set: mock(() => ({
       where: mock(async () => ({ rowCount: 1 })),
     })),
-    update: mock(() => ({
-      set: mock(() => ({
-        where: mock(async () => ({ rowCount: 1 })),
-      })),
-    })),
-  },
+  })),
+};
+
+// We mock the database calls.
+mock.module("../database/drizzle.client.ts", () => ({
+  getDb: () => mockDb,
+  getPool: () => ({ end: mock(async () => {}) }),
 }));
 
 type MockFn = ReturnType<typeof mock>;
@@ -50,9 +54,9 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-  (db.select as MockFn).mockClear();
-  (db.delete as MockFn).mockClear();
-  (db.update as MockFn).mockClear();
+  (mockDb.select as MockFn).mockClear();
+  (mockDb.delete as MockFn).mockClear();
+  (mockDb.update as MockFn).mockClear();
 });
 
 describe("processOutbox", () => {
@@ -79,7 +83,7 @@ describe("processOutbox", () => {
       },
     ];
 
-    (db.select as MockFn).mockImplementation(() => ({
+    (mockDb.select as MockFn).mockImplementation(() => ({
       from: () => ({
         where: () => ({
           limit: async () => mockRows,
@@ -90,8 +94,8 @@ describe("processOutbox", () => {
     await processOutbox(container);
 
     expect(mockEventBus.publish).toHaveBeenCalled();
-    expect(db.delete).toHaveBeenCalled();
-    expect(db.update).not.toHaveBeenCalled();
+    expect(mockDb.delete).toHaveBeenCalled();
+    expect(mockDb.update).not.toHaveBeenCalled();
   });
 
   it("should increment retry count on failure", async () => {
@@ -116,7 +120,7 @@ describe("processOutbox", () => {
       },
     ];
 
-    (db.select as MockFn).mockImplementation(() => ({
+    (mockDb.select as MockFn).mockImplementation(() => ({
       from: () => ({
         where: () => ({
           limit: async () => mockRows,
@@ -127,8 +131,8 @@ describe("processOutbox", () => {
     await processOutbox(container);
 
     expect(mockEventBus.publish).toHaveBeenCalled();
-    expect(db.update).toHaveBeenCalled();
-    expect(db.delete).not.toHaveBeenCalled();
+    expect(mockDb.update).toHaveBeenCalled();
+    expect(mockDb.delete).not.toHaveBeenCalled();
   });
 
   it("should not process events that have reached MAX_RETRIES", async () => {
@@ -155,7 +159,7 @@ describe("processOutbox", () => {
     ];
 
     // Select should not return this row because of the lt(retryCount, 10) condition
-    (db.select as MockFn).mockImplementation(() => ({
+    (mockDb.select as MockFn).mockImplementation(() => ({
       from: () => ({
         where: () => ({
           limit: async () => [], // Simulating that the query filtered it out

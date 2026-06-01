@@ -11,12 +11,14 @@ import {
 import type { AppContainer } from "@repo/infrastructure";
 import {
   createAppContainer,
-  db,
+  getDb,
   outbox,
   processOutbox,
   startOutboxProcessor,
   stopOutboxProcessor,
 } from "@repo/infrastructure";
+
+const db = getDb();
 import { err, ok } from "@repo/shared";
 import { eq } from "drizzle-orm";
 import { createServer } from "./server";

@@ -1,96 +1,92 @@
 import { afterEach, describe, expect, it, mock } from "bun:test";
-
-// ─── Mock ioredis ──────────────────────────────────────────────────────
-// No Redis service in CI (only postgres), so mock the Redis class entirely.
-// The mock bridges pub/sub internally to simulate Redis Pub/Sub:
-//   - publish() triggers messageHandler if one is registered
-//   - on("message", ...) captures the handler for direct triggering
-
-let rejectWith: Error | null = null;
-let messageHandler:
-  | ((channel: string, message: string) => Promise<void>)
-  | null = null;
-
-const mockQuit = mock(async () => {
-  if (rejectWith) throw rejectWith;
-  return "OK" as const;
-});
-const mockPublish = mock(async (_channel: string, _message: string) => 0);
-const mockSubscribe = mock(async (_channel: string) => undefined);
-
-mock.module("ioredis", () => ({
-  Redis: class {
-    on = mock((event: string, handler: unknown) => {
-      if (event === "message") {
-        messageHandler = handler as (
-          channel: string,
-          message: string,
-        ) => Promise<void>;
-      }
-      return this;
-    });
-    publish = mockPublish;
-    subscribe = mockSubscribe;
-    quit = mockQuit;
-  },
-}));
-
 import { RedisEventBus } from "./redis-event-bus.ts";
 
-/** Helper: type-safe access to the captured message handler. */
-function getMessageHandler(): (
-  channel: string,
-  message: string,
-) => Promise<void> {
-  return messageHandler as (channel: string, message: string) => Promise<void>;
+// ─── Mock client factory ──────────────────────────────────────────────
+// Creates lightweight mock objects that satisfy the Redis interface
+// methods used by RedisEventBus. Clients are passed directly to the
+// constructor via dependency injection — no mock.module needed.
+
+type EventHandler = (channel: string, message: string) => Promise<void>;
+
+interface MockRedisClient {
+  on: ReturnType<typeof mock>;
+  publish: ReturnType<typeof mock>;
+  subscribe: ReturnType<typeof mock>;
+  quit: ReturnType<typeof mock>;
+  /** Captured "message" handler registered via on("message", ...). */
+  getMessageHandler: () => EventHandler | undefined;
+}
+
+function createMockClient(): MockRedisClient {
+  const handlers = new Map<string, EventHandler>();
+  return {
+    getMessageHandler: () => handlers.get("message"),
+    on: mock((event: string, handler: EventHandler) => {
+      handlers.set(event, handler);
+    }),
+    publish: mock(async (_channel: string, _message: string) => 0),
+    subscribe: mock(async (_channel: string) => undefined),
+    quit: mock(async () => "OK" as const),
+  };
 }
 
 describe("RedisEventBus", () => {
   const originalConsoleError = console.error;
-  const originalConsoleLog = console.log;
 
   afterEach(() => {
-    mockQuit.mockClear();
-    mockPublish.mockClear();
-    mockSubscribe.mockClear();
-    rejectWith = null;
-    messageHandler = null;
     console.error = originalConsoleError;
-    console.log = originalConsoleLog;
   });
+
+  /** Create a bus with fresh mock clients for each test. */
+  function createBus() {
+    const pubClient = createMockClient();
+    const subClient = createMockClient();
+    const bus = new RedisEventBus({ pubClient, subClient } as never);
+    return { pubClient, subClient, bus };
+  }
 
   // ─── disconnect() ────────────────────────────────────────────────────
 
   describe("disconnect()", () => {
     it("should call quit() on both pubClient and subClient", async () => {
-      const bus = new RedisEventBus("redis://localhost:6379");
+      const { pubClient, subClient, bus } = createBus();
 
       await bus.disconnect();
 
-      expect(mockQuit).toHaveBeenCalledTimes(2);
+      expect(pubClient.quit).toHaveBeenCalledTimes(1);
+      expect(subClient.quit).toHaveBeenCalledTimes(1);
     });
 
     it("should be idempotent when called multiple times", async () => {
-      const bus = new RedisEventBus("redis://localhost:6379");
+      const { pubClient, subClient, bus } = createBus();
 
       await bus.disconnect();
       await expect(bus.disconnect()).resolves.toBeUndefined();
       await expect(bus.disconnect()).resolves.toBeUndefined();
 
       // quit() should only be called for the first disconnect (2 clients)
-      expect(mockQuit).toHaveBeenCalledTimes(2);
+      expect(pubClient.quit).toHaveBeenCalledTimes(1);
+      expect(subClient.quit).toHaveBeenCalledTimes(1);
     });
 
     it("should not reject when quit() throws — logs error instead", async () => {
       const errorLogSpy = mock(() => {});
       console.error = errorLogSpy;
-      rejectWith = new Error("Connection closed");
 
-      const bus = new RedisEventBus("redis://localhost:6379");
+      const pubClient = createMockClient();
+      const subClient = createMockClient();
+      pubClient.quit = mock(async () => {
+        throw new Error("Connection closed");
+      });
+      subClient.quit = mock(async () => {
+        throw new Error("Connection closed");
+      });
+      const bus = new RedisEventBus({ pubClient, subClient } as never);
 
       await expect(bus.disconnect()).resolves.toBeUndefined();
 
-      expect(mockQuit).toHaveBeenCalledTimes(2);
+      expect(pubClient.quit).toHaveBeenCalledTimes(1);
+      expect(subClient.quit).toHaveBeenCalledTimes(1);
       expect(errorLogSpy).toHaveBeenCalledTimes(2);
       expect(errorLogSpy).toHaveBeenCalledWith(
         "[RedisEventBus] Error during disconnect:",
@@ -103,25 +99,25 @@ describe("RedisEventBus", () => {
 
   describe("subscribe() + publish()", () => {
     it("should register handler and subscribe to Redis channel", () => {
-      const bus = new RedisEventBus("redis://localhost:6379");
+      const { subClient, bus } = createBus();
       const handler = mock(async () => {});
 
       // The first subscribe() for an eventType triggers Redis subscribe
       bus.subscribe("UserCreated", handler);
 
-      expect(mockSubscribe).toHaveBeenCalledTimes(1);
-      expect(mockSubscribe).toHaveBeenCalledWith("events:UserCreated");
+      expect(subClient.subscribe).toHaveBeenCalledTimes(1);
+      expect(subClient.subscribe).toHaveBeenCalledWith("events:UserCreated");
 
       // Second subscribe for the same event type should NOT re-subscribe
       bus.subscribe(
         "UserCreated",
         mock(async () => {}),
       );
-      expect(mockSubscribe).toHaveBeenCalledTimes(1);
+      expect(subClient.subscribe).toHaveBeenCalledTimes(1);
     });
 
     it("should subscribe to different channels for different event types", () => {
-      const bus = new RedisEventBus("redis://localhost:6379");
+      const { subClient, bus } = createBus();
 
       bus.subscribe(
         "UserCreated",
@@ -132,13 +128,13 @@ describe("RedisEventBus", () => {
         mock(async () => {}),
       );
 
-      expect(mockSubscribe).toHaveBeenCalledTimes(2);
-      expect(mockSubscribe).toHaveBeenCalledWith("events:UserCreated");
-      expect(mockSubscribe).toHaveBeenCalledWith("events:UserDeleted");
+      expect(subClient.subscribe).toHaveBeenCalledTimes(2);
+      expect(subClient.subscribe).toHaveBeenCalledWith("events:UserCreated");
+      expect(subClient.subscribe).toHaveBeenCalledWith("events:UserDeleted");
     });
 
     it("should call pubClient.publish with serialized event", async () => {
-      const bus = new RedisEventBus("redis://localhost:6379");
+      const { pubClient, bus } = createBus();
       const event = {
         aggregateId: "user-123",
         eventType: "UserCreated",
@@ -149,16 +145,21 @@ describe("RedisEventBus", () => {
       const result = await bus.publish(event);
 
       expect(result.isOk()).toBe(true);
-      expect(mockPublish).toHaveBeenCalledTimes(1);
-      expect(mockPublish).toHaveBeenCalledWith(
+      expect(pubClient.publish).toHaveBeenCalledTimes(1);
+      expect(pubClient.publish).toHaveBeenCalledWith(
         "events:UserCreated",
         JSON.stringify(event),
       );
     });
 
     it("should deliver event to registered handler when message arrives", async () => {
-      const bus = new RedisEventBus("redis://localhost:6379");
-      expect(messageHandler).not.toBeNull(); // captured from constructor
+      const pubClient = createMockClient();
+      const subClient = createMockClient();
+      const bus = new RedisEventBus({ pubClient, subClient } as never);
+
+      // The message handler was captured during construction
+      const messageHandler = subClient.getMessageHandler();
+      expect(messageHandler).toBeDefined();
 
       const handler = mock(async (_event: unknown) => {});
       bus.subscribe("UserCreated", handler);
@@ -169,20 +170,14 @@ describe("RedisEventBus", () => {
         occurredAt: "2024-06-01T12:00:00.000Z",
         version: 1,
       };
-      await getMessageHandler()(
+      await messageHandler?.(
         "events:UserCreated",
         JSON.stringify(eventPayload),
       );
 
       expect(handler).toHaveBeenCalledTimes(1);
-      interface IncomingEvent {
-        aggregateId: string;
-        eventType: string;
-        occurredAt: Date;
-        version: number;
-      }
       const calledEvent = handler.mock.calls[0]?.[0] as
-        | IncomingEvent
+        | Record<string, unknown>
         | undefined;
       expect(calledEvent).toMatchObject({
         aggregateId: "user-456",
@@ -197,14 +192,16 @@ describe("RedisEventBus", () => {
     });
 
     it("should call all handlers registered for the same event type", async () => {
-      const bus = new RedisEventBus("redis://localhost:6379");
+      const pubClient = createMockClient();
+      const subClient = createMockClient();
+      const bus = new RedisEventBus({ pubClient, subClient } as never);
       const handler1 = mock(async () => {});
       const handler2 = mock(async () => {});
 
       bus.subscribe("UserCreated", handler1);
       bus.subscribe("UserCreated", handler2);
 
-      await getMessageHandler()(
+      await subClient.getMessageHandler()?.(
         "events:UserCreated",
         JSON.stringify({
           aggregateId: "u-1",
@@ -219,13 +216,15 @@ describe("RedisEventBus", () => {
     });
 
     it("should not call handler for a different event type", async () => {
-      const bus = new RedisEventBus("redis://localhost:6379");
+      const pubClient = createMockClient();
+      const subClient = createMockClient();
+      const bus = new RedisEventBus({ pubClient, subClient } as never);
       const handler = mock(async () => {});
 
       bus.subscribe("UserCreated", handler);
 
       // Trigger message for a different event type
-      await getMessageHandler()(
+      await subClient.getMessageHandler()?.(
         "events:UserDeleted",
         JSON.stringify({
           aggregateId: "u-2",
@@ -239,7 +238,9 @@ describe("RedisEventBus", () => {
     });
 
     it("should publishAll and deliver events to all subscribers", async () => {
-      const bus = new RedisEventBus("redis://localhost:6379");
+      const pubClient = createMockClient();
+      const subClient = createMockClient();
+      const bus = new RedisEventBus({ pubClient, subClient } as never);
       const createHandler = mock(async () => {});
       const deleteHandler = mock(async () => {});
 
@@ -264,18 +265,20 @@ describe("RedisEventBus", () => {
       expect(result.isOk()).toBe(true);
 
       // Verify both events were published via pubClient
-      expect(mockPublish).toHaveBeenCalledTimes(2);
-      expect(mockPublish).toHaveBeenCalledWith(
+      expect(pubClient.publish).toHaveBeenCalledTimes(2);
+      expect(pubClient.publish).toHaveBeenCalledWith(
         "events:UserCreated",
         JSON.stringify(createdEvent),
       );
-      expect(mockPublish).toHaveBeenCalledWith(
+      expect(pubClient.publish).toHaveBeenCalledWith(
         "events:UserDeleted",
         JSON.stringify(deletedEvent),
       );
 
       // Deliver each event via the message handler
-      await getMessageHandler()(
+      const messageHandler = subClient.getMessageHandler();
+      expect(messageHandler).toBeDefined();
+      await messageHandler?.(
         "events:UserCreated",
         JSON.stringify({
           aggregateId: createdEvent.aggregateId,
@@ -284,7 +287,7 @@ describe("RedisEventBus", () => {
           version: createdEvent.version,
         }),
       );
-      await getMessageHandler()(
+      await messageHandler?.(
         "events:UserDeleted",
         JSON.stringify({
           aggregateId: deletedEvent.aggregateId,

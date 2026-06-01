@@ -27,14 +27,23 @@ export class RedisEventBus
   private disconnected = false;
   private readonly logger: Logger;
 
-  constructor(redisUrl: string, logger: Logger = console) {
+  constructor(
+    redisUrlOrOptions: string | { pubClient: Redis; subClient: Redis },
+    logger: Logger = console,
+  ) {
     this.logger = logger;
-    this.pubClient = new Redis(redisUrl, {
-      maxRetriesPerRequest: null,
-    });
-    this.subClient = new Redis(redisUrl, {
-      maxRetriesPerRequest: null,
-    });
+
+    if (typeof redisUrlOrOptions === "string") {
+      this.pubClient = new Redis(redisUrlOrOptions, {
+        maxRetriesPerRequest: null,
+      });
+      this.subClient = new Redis(redisUrlOrOptions, {
+        maxRetriesPerRequest: null,
+      });
+    } else {
+      this.pubClient = redisUrlOrOptions.pubClient;
+      this.subClient = redisUrlOrOptions.subClient;
+    }
 
     this.pubClient.on("error", (error) => {
       this.logger.error("[RedisEventBus] Pub Client Error:", error);
