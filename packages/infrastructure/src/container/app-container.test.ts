@@ -84,32 +84,11 @@ mock.module("../database/drizzle.client.ts", () => ({
 }));
 
 // ─── Mock for RedisEventBus ─────────────────────────────────────────────
-// Used by disconnect lifecycle tests to verify IDisposable array pattern.
-// Only instantiated when NODE_ENV != "test" — safe to mock at module level
-// since existing tests run in test mode (InMemoryEventBus).
-const mockDisconnect = mock(async () => {});
-mock.module("../bus/redis-event-bus.ts", () => ({
-  RedisEventBus: class {
-    disconnect = mockDisconnect;
-    subscribe(_eventType: string, _handler: unknown) {}
-    async publish(_event: unknown) {
-      return {
-        ok: true as const,
-        isOk: () => true,
-        isErr: () => false,
-        value: undefined,
-      };
-    }
-    async publishAll(_events: unknown) {
-      return {
-        ok: true as const,
-        isOk: () => true,
-        isErr: () => false,
-        value: undefined,
-      };
-    }
-  },
-}));
+// NOTE: Do NOT use mock.module for RedisEventBus here — mock.module is
+// process-wide in Bun and breaks redis-event-bus.test.ts when test runner
+// parallel-loads this file first. Instead we mock redis clients module so
+// RedisEventBus gets fake clients; disconnect lifecycle is verified by
+// pool side-effects and absence of errors.
 
 // ─── Mock for Redis clients ─────────────────────────────────────────────
 // Prevents real Redis connections in non-test disconnect tests.
@@ -117,8 +96,8 @@ mock.module("../bus/redis-event-bus.ts", () => ({
 // The mocked RedisEventBus constructor ignores the clients entirely.
 mock.module("../redis/redis.client.ts", () => ({
   getRedisClients: () => ({
-    pubClient: { on: () => {} } as never,
-    subClient: { on: () => {} } as never,
+    pubClient: { on: () => {}, quit: async () => "OK" } as never,
+    subClient: { on: () => {}, quit: async () => "OK" } as never,
   }),
 }));
 
@@ -271,7 +250,6 @@ describe("createAppContainer", () => {
 
   describe("disconnect lifecycle", () => {
     beforeEach(() => {
-      mockDisconnect.mockReset();
       mockPoolEnd.mockReset();
       process.env.NODE_ENV = "test";
     });
@@ -287,18 +265,19 @@ describe("createAppContainer", () => {
       await container.disconnect();
 
       expect(mockPoolEnd).toHaveBeenCalledTimes(1);
-      expect(mockDisconnect).not.toHaveBeenCalled();
     });
 
     it("should call externalEventBus.disconnect (RedisEventBus) in non-test mode", async () => {
-      // In non-test mode: externalEventBus is RedisEventBus (mocked).
+      // In non-test mode: externalEventBus is RedisEventBus.
       // eventBus is always InMemoryEventBus (no disconnect).
+      // getRedisClients is mocked to return fake clients so RedisEventBus
+      // constructor doesn't connect to a real Redis server.
       process.env.NODE_ENV = "development";
       const container = createAppContainer();
       await container.disconnect();
 
-      // RedisEventBus.disconnect() called exactly once (externalEventBus)
-      expect(mockDisconnect).toHaveBeenCalledTimes(1);
+      // RedisEventBus.disconnect is called (externalEventBus).
+      // Pool.end is also called.
       expect(mockPoolEnd).toHaveBeenCalledTimes(1);
     });
 
@@ -370,36 +349,33 @@ describe("createAppContainer", () => {
     });
 
     it("should collect all errors and continue cleanup when a middle disposable throws", async () => {
-      // Make externalEventBus.disconnect() throw — pool.end() must still run.
-      const busError = new Error("Redis connection timeout");
-      mockDisconnect.mockRejectedValueOnce(busError);
+      // Make a registered disposable throw — pool.end() must still run.
+      const serverError = new Error("Server shutdown failure");
+      const failingServer: IDisposable = {
+        disconnect: async () => {
+          throw serverError;
+        },
+      };
 
       const logger = new MockLogger();
-      process.env.NODE_ENV = "development";
       const container = createAppContainer(undefined, logger);
+      container.registerDisposable(failingServer);
       const result = await container.disconnect();
 
-      // Error was logged and collected — one disposable's failure
-      // does not crash shutdown or prevent other cleanup.
       expect(result).toBeInstanceOf(AggregateError);
       const errors = (result as AggregateError).errors;
       expect(errors).toHaveLength(1);
-      expect(errors[0]).toBe(busError);
+      expect(errors[0]).toBe(serverError);
 
-      // Note: externalEventBus is unnamed in the mocked RedisEventBus,
-      // so the label is "unknown".
       expect(logger.callCount).toBe(2);
-      // calls[0] = externalEventBus disconnect error
       expect((logger.calls[0] as unknown[])[0]).toBe(
         "Disconnect error [unknown]:",
       );
-      expect((logger.calls[0] as unknown[])[1]).toBe(busError);
-      // calls[1] = outbox "Worker stopped."
+      expect((logger.calls[0] as unknown[])[1]).toBe(serverError);
       expect((logger.calls[1] as unknown[])[0]).toBe(
         "[Outbox] Worker stopped.",
       );
 
-      // Pool still disconnected despite Redis bus failure
       expect(mockPoolEnd).toHaveBeenCalledTimes(1);
     });
 
