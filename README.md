@@ -24,15 +24,64 @@
 ```
 monorepo/
 ├── apps/
-│   ├── api/          # ElysiaJS backend (port 3000)
-│   └── web/          # Vite + React frontend (port 5173)
+│   ├── api/                  # ElysiaJS Backend (port 3000)
+│   │   ├── src/
+│   │   │   ├── routes/       # API router groups & endpoint controllers
+│   │   │   ├── schemas/      # Request/response validation schemas
+│   │   │   ├── server.ts     # Elysia instance, plugin configuration & middleware
+│   │   │   └── index.ts      # Server listener entry point
+│   │   ├── Dockerfile        # Backend multi-stage production Docker build
+│   │   └── package.json
+│   └── web/                  # Vite + React 19 Frontend (port 5173)
+│       ├── src/
+│       │   ├── features/     # Feature-based pages and modules (e.g., user flow)
+│       │   ├── lib/          # App-wide library configurations (e.g., API client)
+│       │   ├── index.css     # Global styles & premium design systems
+│       │   ├── main.tsx      # React DOM entry point
+│       │   └── App.tsx       # Root React layout and main navigation
+│       ├── Dockerfile        # Frontend production Nginx multi-stage build
+│       ├── nginx.conf        # Production Nginx reverse proxy configuration
+│       └── package.json
 └── packages/
-    ├── domain/        # Entities, VOs, Aggregates, Domain Events
-    ├── application/   # CQRS Commands/Queries, Ports
-    ├── infrastructure/# Drizzle repos, Event Store, Buses, DI Container
-    ├── shared/        # Result monad, errors, types
-    ├── ui/            # Shared React components
-    └── typescript-config/
+    ├── domain/                # Enterprise DDD Core (Zero external dependencies)
+    │   └── src/
+    │       ├── shared/        # Core DDD primitives (Value Objects, Entity Base)
+    │       └── user/          # User Domain Aggregate, Entities, Domain Events
+    ├── application/           # Application Business Logic (CQRS & Ports)
+    │   └── src/
+    │       ├── shared/        # Abstract Event/Command Bus interfaces & results
+    │       └── user/          # User command/query handlers, use-cases, and ports
+    ├── infrastructure/        # Adapter Layer (Framework implementations & DB access)
+    │   ├── src/
+    │   │   ├── bus/           # In-memory & Redis Command/Event Bus adapters
+    │   │   ├── cache/         # Cache wrapper implementations (Redis)
+    │   │   ├── container/     # AppContainer Composition Root (Dependency Injection)
+    │   │   ├── database/      # Drizzle ORM client initialization & schemas
+    │   │   ├── event-store/   # CQRS event store persistency handlers
+    │   │   ├── logger/        # Pino logging configuration
+    │   │   ├── outbox/        # Outbox pattern scheduling & execution engine
+    │   │   ├── projections/   # Read model projection synchronizers
+    │   │   ├── redis/         # Redis connection client instance
+    │   │   ├── repositories/  # Drizzle repositories implementing application ports
+    │   │   └── subscribers/   # Domain event subscribers & handlers
+    │   ├── drizzle/           # Production-safe SQL migration files
+    │   ├── drizzle.config.ts  # Drizzle CLI toolkit configurations
+    │   └── package.json
+    ├── shared/                # Core Language extensions & functional utilities
+    │   └── src/
+    │       ├── result.ts      # Result Monad implementation (Ok/Err responses)
+    │       ├── errors.ts      # Base Domain/Application exception types
+    │       ├── dto.ts         # Data Transfer Object mapping helpers
+    │       └── types.ts       # Shared TypeScript utility type declarations
+    ├── config/                # Shared environment & config schemas
+    │   └── src/
+    │       ├── env-schema.ts  # Unified Zod environment verification schema
+    │       └── index.ts
+    ├── ui/                    # Monorepo Shared React Components library
+    │   └── src/
+    │       ├── button.tsx     # Reusable design system Button component
+    │       └── index.ts       # Entry point exporting shared UI elements
+    └── typescript-config/     # Centralized TypeScript tsconfig presets
 ```
 
 ---
